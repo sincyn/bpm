@@ -1,0 +1,39 @@
+# Random.node
+description: "Generates a random number within a specified range"
+group: Random
+name: Random
+extends: Base/Node
+
+theme:
+  color: '#167933'
+  width: 140
+  height: 60
+  icon: 0xe55f
+edges:
+  min:
+    description: 'The minimum value (inclusive)'
+    direction: input
+    type: number
+    value:
+      type: float
+      min: -100
+      max: 100
+      default: 0
+  max:
+    description: 'The maximum value (inclusive)'
+    direction: input
+    type: number
+    value:
+      type: float
+      min: -100
+      max: 100
+      default: 1
+  result:
+    description: 'The generated random number'
+    direction: output
+    type: number
+
+source: |
+  local function ${NODE.name}_${NODE.uid}(min, max)
+    return min + math.random() * (max - min)
+  end

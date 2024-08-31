@@ -1,0 +1,31 @@
+# Print.node
+description: "Prints a message to the console."
+group: Actions
+name: Notify
+extends: Base/Node
+
+theme:
+  color: '#292721'
+  height: 60
+  width: 100
+  icon: 0xf27a
+edges:
+  exec_in:
+    description: 'The input execution flow'
+    direction: input
+    type: exec
+  value:
+    description: 'The message to print.'
+    direction: input
+    type: any
+  exec_out:
+    description: 'The output execution flow'
+    direction: output
+    type: exec
+
+source: |
+  local _Notify = java.import('noderspace.server.environment.Notify')
+  local function ${NODE.name}_${NODE.uid}(value)
+    _Notify:info(value)
+    ${EXEC.exec_out}
+  end
