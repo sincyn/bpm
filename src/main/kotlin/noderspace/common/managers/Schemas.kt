@@ -34,7 +34,6 @@ class Schemas(private val path: Path) : Listener {
     }
 
     override fun onPacket(packet: Packet, from: UUID) {
-        logger.debug { "Received packet $packet from $from" }
         if (packet is NodeLibraryRequest) {
             //Send the node library to the client
             val response = NodeLibraryResponse(library.collectToPropertyList())

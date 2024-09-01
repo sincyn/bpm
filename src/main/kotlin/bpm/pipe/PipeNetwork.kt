@@ -1,8 +1,12 @@
 package bpm.pipe
+
+import bpm.mc.block.BasePipeBlock
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.level.Level
+
 class PipeNetwork {
+
     val pipes = mutableMapOf<BlockPos, BasePipeBlock>()
 
     fun addPipe(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
@@ -36,7 +40,16 @@ class PipeNetwork {
         return newNetworks
     }
 
-    private fun findConnectedPipes(level: Level, start: BlockPos, availablePipes: Map<BlockPos, BasePipeBlock>): Map<BlockPos, BasePipeBlock> {
+    fun updateConnections(level: Level) {
+        val connectedPipes = findConnectedPipes(level, pipes.keys.first(), pipes)
+        pipes.keys.retainAll(connectedPipes.keys)
+    }
+
+    private fun findConnectedPipes(
+        level: Level,
+        start: BlockPos,
+        availablePipes: Map<BlockPos, BasePipeBlock>
+    ): Map<BlockPos, BasePipeBlock> {
         val connectedPipes = mutableMapOf<BlockPos, BasePipeBlock>()
         val queue = ArrayDeque<BlockPos>()
         queue.add(start)

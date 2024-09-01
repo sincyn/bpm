@@ -1,5 +1,6 @@
-package bpm.pipe
+package bpm.mc.block
 
+import bpm.pipe.PipeNetworkManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.level.Level
@@ -10,7 +11,6 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty
 import net.neoforged.neoforge.common.extensions.IBlockExtension
 
 open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExtension {
-
     companion object {
         val NORTH: BooleanProperty = BooleanProperty.create("north")
         val EAST: BooleanProperty = BooleanProperty.create("east")
@@ -18,26 +18,22 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         val WEST: BooleanProperty = BooleanProperty.create("west")
         val UP: BooleanProperty = BooleanProperty.create("up")
         val DOWN: BooleanProperty = BooleanProperty.create("down")
-        val ALL_DIRECTIONS = listOf(NORTH, EAST, SOUTH, WEST, UP, DOWN)
+        val PROXY = BooleanProperty.create("proxy")
+        val ALL_STATES = listOf(NORTH, EAST, SOUTH, WEST, UP, DOWN, PROXY)
     }
 
     init {
         registerDefaultState(stateDefinition.any().apply {
-            ALL_DIRECTIONS.forEach { setValue(it, false) }
+            ALL_STATES.forEach { setValue(it, false) }
         })
     }
 
     override fun createBlockStateDefinition(builder: StateDefinition.Builder<Block, BlockState>) {
-        builder.add(*ALL_DIRECTIONS.toTypedArray())
+        builder.add(*ALL_STATES.toTypedArray())
     }
 
     override fun neighborChanged(
-        state: BlockState,
-        level: Level,
-        pos: BlockPos,
-        block: Block,
-        fromPos: BlockPos,
-        isMoving: Boolean
+        state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
     ) {
         if (!level.isClientSide) {
             val newState = getUpdatedState(level, pos, state)
@@ -54,11 +50,34 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     }
 
     protected open fun getUpdatedState(level: Level, pos: BlockPos, currentState: BlockState): BlockState {
-        var newState = currentState
+        var newState = currentState.setValue(PROXY, false) // Reset proxy state
+        var connections = mutableListOf<Direction>()
+
         for (direction in Direction.values()) {
             val canConnect = canConnectTo(level, pos, direction)
-            newState = newState.setValue(getPropertyForDirection(direction), canConnect)
+            if (canConnect) {
+                connections.add(direction)
+            }
+            newState = newState.setValue(getPropertyForDirection(direction), false) // Reset all connection states
         }
+
+        when {
+            connections.isEmpty() -> {
+                // If there are no connections, set proxy to true and UP to true
+                newState = newState.setValue(PROXY, true).setValue(UP, true)
+            }
+            connections.size == 1 -> {
+                // If there's only one connection, set the proxy state and the corresponding direction
+                newState = newState.setValue(PROXY, true).setValue(getPropertyForDirection(connections[0]), true)
+            }
+            else -> {
+                // Otherwise, set the connection states for all connections
+                for (direction in connections) {
+                    newState = newState.setValue(getPropertyForDirection(direction), true)
+                }
+            }
+        }
+
         return newState
     }
 
@@ -97,7 +116,9 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
         super.onRemove(state, level, pos, newState, isMoving)
         if (!level.isClientSide && state.block != newState.block) {
-            onPipeRemoved(level, pos)
+            PipeNetworkManager.onPipeRemoved(this, level, pos)
+            // Force an update of the network to ensure it recognizes the removed controller
+            PipeNetworkManager.updateNetwork(level, pos)
         }
     }
 }

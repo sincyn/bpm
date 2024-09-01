@@ -253,6 +253,14 @@ class Graph(
         variableMap[name] = property
     }
 
+    fun clear() {
+        nodeMap.clear()
+        edgeMap.clear()
+        nodeEdgeMap.clear()
+        linkMap.clear()
+        variableMap.clear()
+    }
+
 
     object Serializer : Serialize<Graph>(Graph::class) {
 

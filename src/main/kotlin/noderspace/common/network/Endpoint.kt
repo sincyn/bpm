@@ -21,6 +21,7 @@ typealias ListenerProvider = Supplier<Listener>
  */
 abstract class Endpoint<T : Endpoint<T>> {
 
+
     /**
      * Get the value with the specified type.
      *
@@ -62,6 +63,7 @@ abstract class Endpoint<T : Endpoint<T>> {
      */
     fun isRunning(): Boolean = runningRef.get()
 
+    private var isSerializerRegistered = false
 
     /**
      * A list of network listeners.
@@ -111,19 +113,25 @@ abstract class Endpoint<T : Endpoint<T>> {
     internal val shutdown = Thread { stop() }
 
     /**
+     * Registers the serial stuff.
+     */
+    fun registerSerializers() {
+        Serial.registerSerializers()
+        Network.registerPackets()
+        isSerializerRegistered = true
+    }
+
+    /**
      * Registers the current endpoint.
      *
      * @return The registered endpoint.
      */
     fun start(): T {
         Runtime.getRuntime().addShutdownHook(shutdown)
-        ref.set(this)
         runningRef.set(true)
         logger.info { "Endpoint has be registered" }
-        Serial.registerSerializers()
-        Network.registerPackets()
 
-//        Network.register()
+        if (!isSerializerRegistered) registerSerializers()
         installListeners()
         logger.info { "Serializers have been regsitered" }
         initiate()
@@ -442,21 +450,21 @@ abstract class Endpoint<T : Endpoint<T>> {
      * @property uuid The UUID associated with the ID.
      * @property side The Type associated with the ID.
      */
-    data class Connection(var uuid: UUID, val side: Side, val socket: Socket) {
+    data class Connection(var uuid: UUID, val side: Side, val socket: Socket? = null) {
 
         /**
          * The address variable is a string representation of the host address associated with the given socket.
          *
          * @return The host address as a string.
          */
-        val host: String get() = socket.inetAddress.hostAddress
+        val host: String get() = socket?.inetAddress?.hostAddress ?: "localhost"
 
         /**
          * The port variable is an integer representation of the port number associated with the given socket.
          *
          * @return The port number as an integer.
          */
-        val port: Int get() = socket.port
+        val port: Int get() = socket?.port ?: 0
 
         /**
          * Indicates whether the socket is alive or not.
@@ -466,7 +474,7 @@ abstract class Endpoint<T : Endpoint<T>> {
          *
          * @return `true` if the socket is alive, `false` otherwise.
          */
-        val isAlive: Boolean get() = socket.isConnected && !socket.isClosed && !socket.isInputShutdown && !socket.isOutputShutdown && socket.isBound
+        val isAlive: Boolean get() = socket?.isConnected == true && !socket.isClosed && !socket.isInputShutdown && !socket.isOutputShutdown && socket.isBound
 
         override fun toString(): String {
             return "Connection(${uuid}, ${host}, ${port})"

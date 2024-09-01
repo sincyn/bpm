@@ -55,6 +55,8 @@ class CanvasContext : Listener {
     private val selectedNodes = mutableSetOf<UUID>()
     private val selectedLinks = mutableSetOf<UUID>()
     private val notificationQueue = ConcurrentLinkedQueue<NotifyMessage>()
+    private var lastNotification: NotifyMessage? = null
+    private var repeatedCount = 0
     private val workspace: Workspace get() = runtime.workspace ?: throw IllegalStateException("Workspace is null")
 
     private val headerFamily get() = Fonts.getFamily("Inter")["Bold"]
@@ -80,7 +82,7 @@ class CanvasContext : Listener {
     internal val customActionMenu: CustomActionMenu by lazy { CustomActionMenu(workspace, this) }
     private var draggedSourceEdge: Pair<Node, Edge>? = null
     internal val variablesMenu by lazy { VariablesMenu(workspace, this) }
-
+    private val notificationManager = NotificationManager()
     /**
      * Represents the node library used in the application.
      *
@@ -178,150 +180,167 @@ class CanvasContext : Listener {
     }
 
     fun notifications() {
+
         val drawList = ImGui.getWindowDrawList()
-        val currentTime = ImGui.getTime().toFloat()
         val displaySize = ImGui.getIO().displaySize
-        var yOffset = displaySize.y - 20f  // Start from bottom
+        notificationManager.renderNotifications(drawList, displaySize)
 
-        notificationQueue.sortedBy { it.time }
-
-        val visibleNotifications = mutableListOf<NotifyMessage>()
-        val iterator = notificationQueue.iterator()
-        while (iterator.hasNext() && visibleNotifications.size < 6) {
-            val message = iterator.next()
-            val messageStartTime = message.time
-            val alpha = calculateAlpha(currentTime, messageStartTime, message.lifetime)
-
-            if (alpha <= 0) {
-                if (currentTime - messageStartTime > message.lifetime) {
-                    iterator.remove()
-                    lastNotificationEndTime = currentTime
-                }
-                continue
-            }
-
-            visibleNotifications.add(message)
-        }
-
-        for (message in visibleNotifications.asReversed()) {  // Render from bottom to top
-            val alpha = calculateAlpha(currentTime, message.time, message.lifetime)
-            val bgColor = parseColor(message.color, (alpha * 255).toInt())
-            val textColor = ImColor.rgba(255, 255, 255, (alpha * 255).toInt())
-            val headerColor = ImColor.rgba(255, 255, 255, (alpha * 255).toInt())
-
-            val padding = 16f
-            val iconSize = 24f
-            val headerHeight = 32f
-            val margin = 15f
-
-            headerFont.use {
-                val headerSize = ImGui.calcTextSize(message.header)
-
-
-                bodyFont.use {
-                    val textSize = ImGui.calcTextSize(message.message)
-
-                    val totalWidth = maxOf(headerSize.x, textSize.x) + padding * 3 + iconSize
-                    val totalHeight = headerHeight + textSize.y + padding * 3
-
-                    val xPos = displaySize.x - totalWidth - margin - (margin / 2.5f)
-                    yOffset -= totalHeight  // Move up for each notification
-                    val yPos = yOffset - margin / 2.5f
-
-                    // Main background with subtle gradient
-                    drawList.addRectFilledMultiColor(
-                        xPos, yPos,
-                        xPos + totalWidth, yPos + totalHeight,
-                        ImColor.rgba(60, 60, 60, (alpha * 255).toInt()).toLong(),
-                        ImColor.rgba(50, 50, 50, (alpha * 255).toInt()).toLong(),
-                        ImColor.rgba(40, 40, 40, (alpha * 255).toInt()).toLong(),
-                        ImColor.rgba(30, 30, 30, (alpha * 255).toInt()).toLong()
-                    )
-
-                    //Draws a header bar with the bg color
-                    drawList.addRectFilled(
-                        xPos, yPos,
-                        xPos + totalWidth, yPos + headerHeight,
-                        bgColor,
-                        2f
-                    )
-
-
-                    // Colored accent bar based on notification type
-                    val accentColor = when (message.type) {
-                        NotifyMessage.NotificationType.INFO -> ImColor.rgba(70, 130, 180, (alpha * 255).toInt())
-                        NotifyMessage.NotificationType.SUCCESS -> ImColor.rgba(60, 179, 113, (alpha * 255).toInt())
-                        NotifyMessage.NotificationType.WARNING -> ImColor.rgba(255, 165, 0, (alpha * 255).toInt())
-                        NotifyMessage.NotificationType.ERROR -> ImColor.rgba(220, 20, 60, (alpha * 255).toInt())
-                    }
-                    drawList.addRectFilled(
-                        xPos, yPos,
-                        xPos + 4f, yPos + totalHeight,
-                        accentColor,
-                        2f
-                    )
-
-                    // Subtle border
-                    drawList.addRect(
-                        xPos, yPos,
-                        xPos + totalWidth, yPos + totalHeight,
-                        ImColor.rgba(200, 200, 200, (alpha * 77).toInt()),  // 30% of 255 is about 77
-                        4f
-                    )
-
-                    // Icon
-                    val icon = message.icon.toChar().toString()
-                    fontawesome.use {
-                        drawList.addText(
-                            fontawesome,
-                            iconSize,
-                            xPos + padding,
-                            yPos + (headerHeight - iconSize) / 2,
-                            headerColor,
-                            icon
-                        )
-                    }
-
-                    // Header text
-                    headerFont.use {
-                        drawList.addText(
-                            headerFont,
-                            workspace.settings.fontHeaderSize.toFloat(),
-                            xPos + padding * 2 + iconSize,
-                            yPos + (headerHeight - headerSize.y) / 2,
-                            headerColor,
-                            message.header
-                        )
-                    }
-
-                    // Message text
-                    bodyFont.use {
-                        drawList.addText(
-                            bodyFont,
-                            workspace.settings.fontSize.toFloat(),
-                            xPos + padding,
-                            yPos + headerHeight + padding,
-                            textColor,
-                            message.message
-                        )
-                    }
-
-                    yOffset -= 10f  // Add some space between notifications
-                }
-            }
-        }
+//        val drawList = ImGui.getWindowDrawList()
+//        val currentTime = ImGui.getTime().toFloat()
+//        val displaySize = ImGui.getIO().displaySize
+//        var yOffset = displaySize.y - 20f  // Start from bottom
+//
+//        val visibleNotifications = mutableListOf<NotifyMessage>()
+//        val iterator = notificationQueue.iterator()
+//        var lastUniqueNotification: NotifyMessage? = null
+//        var repeatedCount = 0
+//
+//        while (iterator.hasNext() && visibleNotifications.size < 4) {
+//            val message = iterator.next()
+//
+//            // If this is a new unique message, reset the count
+//            if (lastUniqueNotification == null || message.message != lastUniqueNotification.message) {
+//                lastUniqueNotification = message.copy()
+//                repeatedCount = 1
+//            } else {
+//                repeatedCount++
+//            }
+//
+//            // Update the header with the repeat count
+//            message.header = if (repeatedCount > 1) "${message.header} ($repeatedCount)" else message.header
+//
+//            // Calculate alpha based on the time the notification became visible
+//            val visibleTime = currentTime - max(message.time, lastNotificationEndTime)
+//            val alpha = calculateAlpha(visibleTime, message.lifetime)
+//
+//            if (alpha <= 0) {
+//                if (visibleTime > message.lifetime) {
+//                    iterator.remove()
+//                    lastNotificationEndTime = currentTime
+//                }
+//                continue
+//            }
+//
+//            visibleNotifications.add(message)
+//        }
+//
+//        for (message in visibleNotifications.asReversed()) {  // Render from bottom to top
+//            val visibleTime = currentTime - max(message.time, lastNotificationEndTime)
+//            val alpha = calculateAlpha(visibleTime, message.lifetime)
+//            val bgColor = parseColor(message.color, (alpha * 255).toInt())
+//            val textColor = ImColor.rgba(255, 255, 255, (alpha * 255).toInt())
+//            val headerColor = ImColor.rgba(255, 255, 255, (alpha * 255).toInt())
+//
+//            val padding = 16f
+//            val iconSize = 24f
+//            val headerHeight = 32f
+//            val margin = 15f
+//
+//            headerFont.use {
+//                val headerSize = ImGui.calcTextSize(message.header)
+//
+//                bodyFont.use {
+//                    val textSize = ImGui.calcTextSize(message.message)
+//
+//                    val totalWidth = maxOf(headerSize.x, textSize.x) + padding * 3 + iconSize
+//                    val totalHeight = headerHeight + textSize.y + padding * 3
+//
+//                    val xPos = displaySize.x - totalWidth - margin - (margin / 2.5f)
+//                    yOffset -= totalHeight  // Move up for each notification
+//                    val yPos = yOffset - margin / 2.5f
+//
+//                    // Main background with subtle gradient
+//                    drawList.addRectFilledMultiColor(
+//                        xPos, yPos,
+//                        xPos + totalWidth, yPos + totalHeight,
+//                        ImColor.rgba(60, 60, 60, (alpha * 255).toInt()).toLong(),
+//                        ImColor.rgba(50, 50, 50, (alpha * 255).toInt()).toLong(),
+//                        ImColor.rgba(40, 40, 40, (alpha * 255).toInt()).toLong(),
+//                        ImColor.rgba(30, 30, 30, (alpha * 255).toInt()).toLong()
+//                    )
+//
+//                    //Draws a header bar with the bg color
+//                    drawList.addRectFilled(
+//                        xPos, yPos,
+//                        xPos + totalWidth, yPos + headerHeight,
+//                        bgColor,
+//                        2f
+//                    )
+//
+//                    // Colored accent bar based on notification type
+//                    val accentColor = when (message.type) {
+//                        NotifyMessage.NotificationType.INFO -> ImColor.rgba(70, 130, 180, (alpha * 255).toInt())
+//                        NotifyMessage.NotificationType.SUCCESS -> ImColor.rgba(60, 179, 113, (alpha * 255).toInt())
+//                        NotifyMessage.NotificationType.WARNING -> ImColor.rgba(255, 165, 0, (alpha * 255).toInt())
+//                        NotifyMessage.NotificationType.ERROR -> ImColor.rgba(220, 20, 60, (alpha * 255).toInt())
+//                    }
+//                    drawList.addRectFilled(
+//                        xPos, yPos,
+//                        xPos + 4f, yPos + totalHeight,
+//                        accentColor,
+//                        2f
+//                    )
+//
+//                    // Subtle border
+//                    drawList.addRect(
+//                        xPos, yPos,
+//                        xPos + totalWidth, yPos + totalHeight,
+//                        ImColor.rgba(200, 200, 200, (alpha * 77).toInt()),  // 30% of 255 is about 77
+//                        4f
+//                    )
+//
+//                    // Icon
+//                    val icon = message.icon.toChar().toString()
+//                    fontawesome.use {
+//                        drawList.addText(
+//                            fontawesome,
+//                            iconSize,
+//                            xPos + padding,
+//                            yPos + (headerHeight - iconSize) / 2,
+//                            headerColor,
+//                            icon
+//                        )
+//                    }
+//
+//                    // Header text
+//                    headerFont.use {
+//                        drawList.addText(
+//                            headerFont,
+//                            workspace.settings.fontHeaderSize.toFloat(),
+//                            xPos + padding * 2 + iconSize,
+//                            yPos + (headerHeight - headerSize.y) / 2,
+//                            headerColor,
+//                            message.header
+//                        )
+//                    }
+//
+//                    // Message text
+//                    bodyFont.use {
+//                        drawList.addText(
+//                            bodyFont,
+//                            workspace.settings.fontSize.toFloat(),
+//                            xPos + padding,
+//                            yPos + headerHeight + padding,
+//                            textColor,
+//                            message.message
+//                        )
+//                    }
+//
+//                    yOffset -= 10f  // Add some space between notifications
+//                }
+//            }
+//        }
     }
 
-    private fun calculateAlpha(currentTime: Float, startTime: Float, lifetime: Float): Float {
-        val elapsedTime = currentTime - startTime
+    private fun calculateAlpha(visibleTime: Float, lifetime: Float): Float {
         val fadeInTime = 0.3f
         val fadeOutTime = 0.5f
 
         return when {
-            elapsedTime < 0f -> 0f
-            elapsedTime < fadeInTime -> elapsedTime / fadeInTime
-            elapsedTime > lifetime - fadeOutTime -> 1f - (elapsedTime - (lifetime - fadeOutTime)) / fadeOutTime
-            elapsedTime > lifetime -> 0f
+            visibleTime < 0f -> 0f
+            visibleTime < fadeInTime -> visibleTime / fadeInTime
+            visibleTime > lifetime - fadeOutTime -> 1f - (visibleTime - (lifetime - fadeOutTime)) / fadeOutTime
+            visibleTime > lifetime -> 0f
             else -> 1f
         }.coerceIn(0f, 1f)
     }
@@ -929,8 +948,7 @@ class CanvasContext : Listener {
             val edge = workspace.graph.getEdge(packet.edgeUid) ?: return
             edge.properties["value"] = packet.property
         } else if (packet is NotifyMessage) {
-            packet.time = ImGui.getTime().toFloat()
-            notificationQueue.add(packet)
+            notificationManager.addNotification(packet)
         } else if (packet is VariableCreated) {
             workspace.addVariable(packet.name, packet.property["value"])
             logger.info { "Received variable created: ${packet.name}" }
@@ -949,6 +967,64 @@ class CanvasContext : Listener {
         val edgeBounds = computeEdgeBounds(node, edge)
         dragStartPos = Vector2f(edgeBounds.x, edgeBounds.y)
         isLinking = true
+    }
+
+    //Centers the scrolled area around the majority of the nodes
+    fun center() {
+        val nodes = workspace.graph.nodes
+        if (nodes.isEmpty()) return
+
+        val minX = nodes.minOf { it.x }
+        val minY = nodes.minOf { it.y  }
+        val maxX = nodes.maxOf { it.x }
+        val maxY = nodes.maxOf { it.y  }
+        val displaySize = ImGui.getMainViewport().size
+        val zoom = workspace.settings.zoom
+
+        val centerX = ((minX + maxX) / 2)
+        val centerY = ((minY + maxY) / 2)
+
+        workspace.settings.zoom = 0.25f
+//        val scrolled = convertToScreenCoordinates(Vector2f(centerX, centerY))
+
+        val width = maxX - minX
+        val height = maxY - minY
+
+
+        // Calculate the scaled size of the node area
+        val scaledWidth = width * zoom
+        val scaledHeight = height * zoom
+
+        // Calculate the offset to center the nodes
+        val offsetX = (displaySize.x - scaledWidth) / 2
+        val offsetY = (displaySize.y - scaledHeight) / 2
+
+        // Calculate the new scroll position
+        val newScrollX = -centerX + ((displaySize.x / 2)  * zoom)
+        val newScrollY = -centerY * zoom + ((displaySize.y / 2)  * zoom)
+        workspace.settings.scrolled.set(newScrollX, newScrollY)
+
+
+
+
+
+        // Apply the new scroll position
+//        workspace.settings.scrolled.set(newScrollX, newScrollY)
+        println("Centered workspace")
+        //
+//        // Optionally, adjust zoom to fit all nodes if they're too spread out
+//        val zoomX = displaySize.x / (width * 1.1f) // 1.1f adds a little padding
+//        val zoomY = displaySize.y / (height * 1.1f)
+//        val newZoom = minOf(zoomX, zoomY, 1f) // Cap at 1 to prevent zooming in too much
+//
+//        if (newZoom < zoom) {
+//            workspace.settings.zoom = newZoom
+//
+//            // Recalculate scroll position with new zoom
+//            val adjustedScrollX = -centerX * newZoom + displaySize.x / 2
+//            val adjustedScrollY = -centerY * newZoom + displaySize.y / 2
+//            workspace.settings.scrolled.set(adjustedScrollX, adjustedScrollY)
+//        }
     }
 
     fun handleEdgeClick(node: Node, edge: Edge) {
@@ -1009,37 +1085,6 @@ class CanvasContext : Listener {
         return null
     }
 
-
-//    private fun canConnect(sourceEdge: Edge, targetEdge: Edge): Boolean {
-//        // Prevent connecting an edge to itself
-//        if (sourceEdge.uid == targetEdge.uid) return false
-//
-//        // Prevent connecting edges of the same direction (input to input or output to output)
-//        if (sourceEdge.direction == targetEdge.direction) return false
-//
-//        // Prevent connecting edges from the same node
-//        if (sourceEdge.owner == targetEdge.owner) return false
-//
-//        // Prevent creating duplicate connections
-//        val existingLinks = workspace.graph.getLinks()
-//        if (existingLinks.any {
-//                (it.from == sourceEdge.uid && it.to == targetEdge.uid) || (it.from == targetEdge.uid && it.to == sourceEdge.uid)
-//            }) {
-//            return false
-//        }
-//
-//        //If either is any and both are not exec, it's valid
-//        if (sourceEdge.type == "any" && targetEdge.type != "exec" || targetEdge.type == "any" && sourceEdge.type != "exec") {
-//            return true
-//        }
-//
-//        // Check if the edge types are compatible
-//        if (sourceEdge.type != targetEdge.type) {
-//            return false
-//        }
-//
-//        return true
-//    }
 
     private fun canConnect(sourceEdge: Edge, targetEdge: Edge): Boolean {
         // Prevent connecting an edge to itself

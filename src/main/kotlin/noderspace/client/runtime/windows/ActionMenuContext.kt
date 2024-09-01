@@ -1013,14 +1013,19 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         return height
     }
 
+    var isInitialOpen = true
+
     fun open(
         position: ImVec2,
         selectedNodes: Set<Node> = emptySet(),
         selectedLinks: Set<Link> = emptySet(),
         rebuild: Boolean = true
     ) {
-
         if (rebuild) buildFolderStructure()
+        if (isInitialOpen) {
+            isInitialOpen = false
+            return
+        }
         isOpen = true
 
         // Calculate content size
@@ -1060,7 +1065,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         isNodeMenu = selectedNodes.isNotEmpty() || selectedLinks.isNotEmpty()
     }
 
-    private fun close() {
+    fun close() {
         isOpen = false
         searchInputState = TextInputState()
     }

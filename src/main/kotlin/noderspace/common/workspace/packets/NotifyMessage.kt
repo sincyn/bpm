@@ -10,8 +10,10 @@ data class NotifyMessage(
     var message: String = "",
     var lifetime: Float = 5.0f, //5 seconds
     var type: NotificationType = NotificationType.INFO,
-    var header: String = if (type == NotificationType.INFO) "Info" else if (type == NotificationType.SUCCESS) "Success" else if (type == NotificationType.WARNING) "Warning" else "Error"
+    var header: String = if (type == NotificationType.INFO) "Info" else if (type == NotificationType.SUCCESS) "Success" else if (type == NotificationType.WARNING) "Warning" else "Error",
+    var count: Int = 1
 ) : Packet {
+
     var time: Float = 0f
 
     enum class NotificationType {
@@ -25,6 +27,7 @@ data class NotifyMessage(
         buffer.writeFloat(lifetime)
         buffer.writeInt(type.ordinal)
         buffer.writeString(header)
+        buffer.writeInt(count)
     }
 
     override fun deserialize(buffer: Buffer) {
@@ -34,5 +37,6 @@ data class NotifyMessage(
         lifetime = buffer.readFloat()
         type = NotificationType.entries.toTypedArray()[buffer.readInt()]
         header = buffer.readString()
+        count = buffer.readInt()
     }
 }

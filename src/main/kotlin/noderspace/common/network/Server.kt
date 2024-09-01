@@ -1,5 +1,11 @@
 package noderspace.common.network
 
+import bpm.network.AllPlayersTarget
+import bpm.network.MinecraftNetworkAdapter
+import bpm.network.PacketTarget
+import bpm.network.PlayerTarget
+import net.minecraft.server.MinecraftServer
+import net.neoforged.neoforge.server.ServerLifecycleHooks
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Network.new
 import noderspace.common.packets.*
@@ -14,14 +20,24 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class Server(private val port: Int) : Endpoint<Server>(), Runnable {
 
+
+    init {
+        ref.set(this)
+    }
+
     // Create our logger
     private val logger = KotlinLogging.logger {}
 
     // Stores the connections to the server
     private val clients: ConcurrentMap<UUID, Endpoint<ClientWorker>> = ConcurrentHashMap()
+    private val cachedClientPlayers: ConcurrentMap<UUID, PlayerTarget> = ConcurrentHashMap()
     private var socket: ServerSocket? = null
     private val thread = Thread(this, "Network Server")
     override val worker = Worker(this)
+    private val server: MinecraftServer by lazy {
+        ServerLifecycleHooks.getCurrentServer() ?: error("Server not available")
+    }
+
     /**
      * The executor used to handle client connections.
      */
@@ -122,6 +138,17 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
         }
     }
 
+    private fun targetOf(uuid: UUID): PacketTarget? {
+        return cachedClientPlayers.computeIfAbsent(uuid) {
+            val player = server.playerList.getPlayer(uuid)
+            if (player == null) {
+                logger.warn { "Player $uuid not found" }
+                return@computeIfAbsent null
+            }
+            PlayerTarget(player)
+        }
+    }
+
     /**
      * Retrieves the Connection associated with the specified connection ID.
      *
@@ -212,12 +239,9 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
          */
         override fun terminate() {
             try {
-                if (!connection.socket.isInputShutdown)
-                    connection.socket.shutdownInput()
-                if (!connection.socket.isOutputShutdown)
-                    connection.socket.shutdownOutput()
-                if (!connection.socket.isClosed)
-                    connection.socket.close()
+                if (connection.socket?.isInputShutdown == false) connection.socket.shutdownInput()
+                if (connection.socket?.isOutputShutdown == false) connection.socket.shutdownOutput()
+                if (connection.socket?.isClosed == false) connection.socket.close()
 //                clientExecutors.remove(this)
                 running.set(false)
                 logger.info { "Terminated worker for ${connection.uuid}" }
@@ -234,8 +258,10 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
             try {
 
                 if (!connection.isAlive) throw SocketException("Connection is not alive")
-                val output = connection.socket.getOutputStream() ?: throw Exception("Socket is null")
-                packet.write(output)
+                val target = id?.uuid?.let { targetOf(it) } ?: AllPlayersTarget
+//                val output = connection.socket.getOutputStream() ?: throw Exception("Socket is null")
+//                packet.write(output)
+                MinecraftNetworkAdapter.sendPacket(packet, target)
                 logger.info { "Sent packet of type ${packet::class.simpleName} with id ${packet.id}" }
             } catch (ex: SocketException) {
                 logger.warn { "$connection is not alive" }
@@ -259,8 +285,8 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
             try {
 
                 if (!connection.isAlive) return null
-                val input = connection.socket.getInputStream() ?: throw SocketException("Socket is null")
-                val packet = input.readPacket() ?: return null
+                val input = connection.socket?.getInputStream()
+                val packet = input?.readPacket() ?: return null
                 logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
                 return packet
             } catch (ex: SocketException) {

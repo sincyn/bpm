@@ -2,10 +2,10 @@
 	"credit": "Made with Blockbench",
 	"textures": {
 		"1": "bpm:block/texture",
-		"2": "item/ender_pearl",
+		"2": "item/ender_eye",
 		"4": "bpm:block/brim",
 		"5": "bpm:block/cap",
-		"particle": "item/ender_pearl"
+		"particle": "item/ender_eye"
 	},
 	"elements": [
 		{
@@ -628,8 +628,9 @@
 			"scale": [1, 1, 0.54]
 		},
 		"gui": {
-			"rotation": [85, 45, 45],
-			"scale": [1.38, 1.4, 0.79]
+			"rotation": [79, 27, 103],
+			"translation": [2, -4.5, 0],
+			"scale": [1.54, 1.45, 1.45]
 		},
 		"fixed": {
 			"rotation": [-91, 0, 0]

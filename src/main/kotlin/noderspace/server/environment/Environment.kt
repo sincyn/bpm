@@ -408,11 +408,12 @@ object Environment : Listener {
      * @param sendTo The UUID of the user to open the workspace for.
      */
     fun openWorkspace(workspaceId: UUID, sendTo: UUID) {
-        val workspace = workspaces[workspaceId]
+        var workspace = workspaces[workspaceId]
         if (workspace == null) {
-            logger.warn { "Failed to open workspace: $workspaceId" }
-            return
+            workspace = Workspace.create("Untitled", "An empty workspace", workspaceId)
+            workspaces[workspace.uid] = workspace
         }
+
         openedWorkspaces[sendTo] = workspaceId
         val user = User(sendTo, null, workspaceId)
         logger.debug { "Client '$sendTo' Opened workspace: $workspaceId, $user" }

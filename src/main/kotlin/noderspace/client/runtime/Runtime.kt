@@ -1,5 +1,6 @@
 package noderspace.client.runtime
 
+import bpm.mc.gui.Overlay
 import imgui.ImGui
 import imgui.ImGuiIO
 import imgui.flag.ImGuiConfigFlags
@@ -12,7 +13,6 @@ import noderspace.client.runtime.renders.Window
 import noderspace.client.runtime.windows.CanvasContext
 import noderspace.client.runtime.windows.CanvasWindow
 import noderspace.client.runtime.windows.ProjectListWindow
-import noderspace.client.theme.DarkTheme
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.managers.Heartbearts
 import noderspace.common.managers.Schemas
@@ -31,7 +31,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.system.exitProcess
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The `Runtime` interface provides methods for checking the status of keyboard keys and mouse buttons.
@@ -60,6 +60,10 @@ class Runtime(
     private var hasRequestedWorkspaceLibrary = false
     private var queuedWorkspaceLibrary: WorkspaceLibrary? = null
     private lateinit var io: ImGuiIO
+    private val started = AtomicBoolean(false)
+    private val _client = Client(clientUid)
+    private var canvasWindow: CanvasWindow? = null
+
     /**
      * Represents the currently selected node in the application.
      *
@@ -90,14 +94,18 @@ class Runtime(
         client.install(this)
             .install<Heartbearts>()
             .install<Schemas>(Path.of("/Users/jamesraynor/Documents/nodeer/graph-common/src/main/resources/assets/schemas"))
-//            .install<Schemas>(Path.of("C:\\Users\\jraynor\\IdeaProjects\\bp\\graph-common\\src\\main\\resources\\assets\\schemas"))
             .install<CanvasContext>()
+            .install<Overlay>()
 
 
     /**
      * initialize the runtime with the given window handle
      */
     fun start(windowHandle: Long): Runtime {
+        if (started.getAndSet(true)) {
+            logger.warn { "Runtime has already been started" }
+            return this
+        }
         ImGui.createContext();
         configureRenderspace()
         // Initialize fonts
@@ -114,7 +122,7 @@ class Runtime(
             return this
         }
 
-        createClient(Client(clientUid)).start()
+        createClient(_client).start()
         running = true
         logger.info { "Runtime has started" }
         return this
@@ -167,33 +175,35 @@ class Runtime(
     fun process(pollEvents: Boolean = false) {
         if (!running) return
 
-        // Check if we need to request the workspace library
-        if (workspace == null && selectionWindow == null && !hasRequestedWorkspaceLibrary) {
-            client.send(new<WorkspaceLibraryRequest> {
-                logger.info { "Requesting workspace library" }
-            })
-            hasRequestedWorkspaceLibrary = true
-        }
+//        // Check if we need to request the workspace library
+//        if (workspace == null && selectionWindow == null && !hasRequestedWorkspaceLibrary) {
+//            client.send(new<WorkspaceLibraryRequest> {
+//                logger.info { "Requesting workspace library" }
+//            })
+//            hasRequestedWorkspaceLibrary = true
+//        }
 
         // Check if we need to show the queued workspace library
-        queuedWorkspaceLibrary?.let { workspaceLibrary ->
-            if (workspace == null && selectionWindow == null) {
-                showWorkspaceLibrary(workspaceLibrary)
-                queuedWorkspaceLibrary = null
-            }
-        }
+//        queuedWorkspaceLibrary?.let { workspaceLibrary ->
+//            if (workspace == null && selectionWindow == null) {
+//                showWorkspaceLibrary(workspaceLibrary)
+//                queuedWorkspaceLibrary = null
+//            }
+//        }
 
         // Draw the dockspace
-        DarkTheme.themed {
-            dockspace.process()
-            // Poll events from the main thread
+
+        if (canvasWindow != null) {
+            canvasWindow?.render()
         }
+//        dockspace.process()
+        // Poll events from the main thread
 
     }
 
     fun setDisplaySize(width: Float, height: Float) {
         io.displaySize.set(width, height)
-        ImGui.getStyle().scaleAllSizes(1.0f)  // Adjust scale if needed
+//        ImGui.getStyle().scaleAllSizes(1.0f)  // Adjust scale if needed
     }
 
     private fun showWorkspaceLibrary(workspaceLibrary: WorkspaceLibrary) {
@@ -241,6 +251,8 @@ class Runtime(
     }
 
 
+//    fun connect() = client.connect()
+
     fun connect(host: String, port: Int) {
         connectWithRetry(host, port)
         startConnectionMonitor(host, port)
@@ -269,28 +281,38 @@ class Runtime(
         })
     }
 
+    fun closeCanvas() {
+        logger.info { "Resetting workspace" }
+        canvasWindow?.close()
+    }
+
     /**
      * Called when a packet is received from the worker thread
      *
      * @param packet the packet that was received
      */
     override fun onPacket(packet: Packet, from: UUID): Unit = when (packet) {
-        is WorkspaceLibrary -> {
-            // Queue up the workspace library packet
-            queuedWorkspaceLibrary = packet
-            hasRequestedWorkspaceLibrary = false // Reset the flag
-            logger.info { "Received workspace library response: ${packet.workspaces}" }
-        }
+//        is WorkspaceLibrary -> {
+//            // Queue up the workspace library packet
+//            queuedWorkspaceLibrary = packet
+//            hasRequestedWorkspaceLibrary = false // Reset the flag
+//            logger.info { "Received workspace library response: ${packet.workspaces}" }
+//        }
 
         is WorkspaceLoad -> {
             this.workspace = packet.workspace
-            workspaceWindow = dockspace.addFloatingWindow(
-                "Workspace", CanvasWindow(packet.workspace!!, this)
-            ).apply {
-                size = { Platform.frameWidth / 1.4f to Platform.frameHeight / 1.33f }
+
+            if (canvasWindow == null) {
+                canvasWindow = CanvasWindow(packet.workspace!!, this)
+                canvasWindow?.close()
+            } else {
+                canvasWindow?.workspace = packet.workspace!!
             }
-            selectionWindow?.let { dockspace.removeFloatingWindow(it) }
-            selectionWindow = null
+            canvasWindow?.open()
+
+
+//            selectionWindow?.let { dockspace.removeFloatingWindow(it) }
+//            selectionWindow = null
             queuedWorkspaceLibrary = null // Clear any queued workspace library
             logger.info { "Received workspace load response: $packet" }
         }
@@ -362,6 +384,10 @@ class Runtime(
 
     fun reloadNodeLibrary() {
         client.send(new<NodeLibraryReloadRequest> {})
+    }
+
+    fun openCanvas() {
+        canvasWindow?.open()
     }
 
     /**

@@ -2,7 +2,6 @@ package noderspace.client.runtime.windows
 
 import imgui.*
 import imgui.flag.*
-import imgui.type.ImBoolean
 import imgui.type.ImString
 import noderspace.client.font.Fonts
 import noderspace.client.render.IRender
@@ -16,6 +15,7 @@ import noderspace.common.property.cast
 import noderspace.common.property.castOr
 import noderspace.common.utils.fmodf
 import noderspace.common.workspace.Workspace
+import noderspace.common.workspace.WorkspaceSettings
 import noderspace.common.workspace.graph.Edge
 import noderspace.common.workspace.graph.Link
 import noderspace.common.workspace.graph.Node
@@ -26,7 +26,7 @@ import org.joml.Vector4i
 import java.util.*
 import kotlin.math.pow
 
-class CanvasWindow(private val workspace: Workspace, private val runtime: Runtime) : IRender {
+class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRender {
 
 
     private val headerFamily get() = Fonts.getFamily("Inter")["Bold"]
@@ -79,7 +79,7 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
     private val execSegmentCount = 10
     private val execSegmentLength = 10f // Length of each segment in the exec link
     private val execGapRatio = 0.5f // Ratio of gap to segment length
-
+    private var lastCanvasSize: Vector2f = Vector2f()
     /**
      * Manage all the rendering related to the main canvas here.
      */
@@ -88,7 +88,10 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
         ImGui.setNextWindowPos(mainViewport.posX, mainViewport.posY)
         ImGui.setNextWindowSize(mainViewport.sizeX, mainViewport.sizeY)
 
-        ImGui.begin("Canvas", ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove)
+        ImGui.begin(
+            "Canvas",
+            ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or ImGuiWindowFlags.NoScrollbar or ImGuiWindowFlags.NoScrollWithMouse or ImGuiWindowFlags.NoBringToFrontOnFocus or ImGuiWindowFlags.NoNavFocus
+        )
 
         // Update selectedNodes set
         selectedNodes.clear()
@@ -129,8 +132,8 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
             runtime.reloadNodeLibrary()
         }
 
-        renderButton(bounds.z - 50f, bounds.y + 100f, FontAwesome.ListUl, fontSize = 25f, width = 30f, height = 30f) {
-//            variablesMenu
+        renderButton(bounds.z - 50f, bounds.y + 100f, FontAwesome.AlignCenter, fontSize = 25f, width = 30f, height = 30f) {
+            canvasCtx.center()
         }
 
         // Render the selection context overlay
@@ -145,9 +148,30 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
         canvasCtx.notifications()
         ImGui.end()
     }
+    //True for the first 1.5 seconds the canvas is open
+
+    private val initialOpen get() = System.currentTimeMillis() - openTime < 250
+    private var openTime = System.currentTimeMillis()
+
+    fun close() {
+        savedSettings[workspace.uid] = workspace.settings
+        this.scrolled
+        this.customActionMenu.close()
+    }
+
+    fun open() {
+        openTime = System.currentTimeMillis()
+        workspace.settings = savedSettings[workspace.uid] ?: WorkspaceSettings()
+    }
+
+    companion object {
+
+        private val savedSettings = mutableMapOf<UUID, WorkspaceSettings>()
+
+    }
 
     private fun handleContextMenu() {
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+        if (ImGui.isMouseClicked(ImGuiMouseButton.Right) && !initialOpen) {
             val mousePos = ImGui.getMousePos()
             val selectedNodes = findSelectedNodesUnderMouse(mousePos)
             val selectedLinks = findSelectedLinksUnderMouse(mousePos)
@@ -1393,7 +1417,7 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
 //            ImGui.openPopup("CanvasContextMenu")
 //        }
         // Open custom action menu on right-click
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+        if (ImGui.isMouseClicked(ImGuiMouseButton.Right) && !initialOpen) {
             val mousePos = ImGui.getMousePos()
             customActionMenu.open(mousePos)
             canvasCtx.variablesMenu.closePopup()
@@ -1447,6 +1471,7 @@ class CanvasWindow(private val workspace: Workspace, private val runtime: Runtim
             y += zoomedStep
         }
     }
+
 
     /**
      * A helper method to assist with the drawing of the grids

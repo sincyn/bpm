@@ -1,23 +1,29 @@
 package bpm.mc.block
 
 import bpm.mc.gui.NodeEditorGui
-import bpm.pipe.BasePipeBlock
+import bpm.pipe.PipeNetworkManager
 import net.minecraft.core.BlockPos
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.ItemInteractionResult
+import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.EntityBlock
+import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.shapes.BooleanOp
 import net.minecraft.world.phys.shapes.CollisionContext
 import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
+import org.apache.commons.compress.compressors.lz77support.LZ77Compressor
 
 
-class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties) {
+class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), EntityBlock {
 
     private val shape = makeShape()
 
@@ -25,19 +31,20 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties) {
         p_316304_: ItemStack,
         p_316362_: BlockState,
         level: Level,
-        p_316366_: BlockPos,
+        pos: BlockPos,
         player: Player,
         p_316595_: InteractionHand,
         p_316140_: BlockHitResult
     ): ItemInteractionResult {
-        if (!level.isClientSide) {
-            return ItemInteractionResult.SUCCESS
+        if (level.isClientSide) {
+            val tileEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+            val uuid = tileEntity?.getUUID()
+            println("Opening GUI for controller with UUID: $uuid")
+            NodeEditorGui.open(uuid ?: return ItemInteractionResult.FAIL)
         }
-        //If on client, open the gui
-        NodeEditorGui.open(player)
-
-        return super.useItemOn(p_316304_, p_316362_, level, p_316366_, player, p_316595_, p_316140_)
+        return ItemInteractionResult.sidedSuccess(level.isClientSide)
     }
+
 
     override fun getCollisionShape(
         p_60572_: BlockState,
@@ -55,6 +62,58 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties) {
         p_60558_: CollisionContext
     ): VoxelShape {
         return shape
+    }
+
+    override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
+        val level = context.level
+        val pos = context.clickedPos
+        if (!level.isClientSide && PipeNetworkManager.hasControllerInNetwork(level, pos)) {
+            return null // Prevent placement if there's already a controller in the network
+        }
+        return super.getStateForPlacement(context)
+    }
+
+    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
+        super.onPlace(state, level, pos, oldState, isMoving)
+        if (!level.isClientSide) {
+            PipeNetworkManager.onPipeAdded(this, level, pos)
+            // Force an update of the network to ensure it recognizes the new controller
+            PipeNetworkManager.updateNetwork(level, pos)
+        }
+    }
+
+
+    override fun neighborChanged(
+        state: BlockState,
+        level: Level,
+        pos: BlockPos,
+        block: Block,
+        fromPos: BlockPos,
+        isMoving: Boolean
+    ) {
+        super.neighborChanged(state, level, pos, block, fromPos, isMoving)
+        if (!level.isClientSide) {
+            PipeNetworkManager.updateNetwork(level, pos)
+        }
+    }
+
+    override fun canBeReplaced(state: BlockState, context: BlockPlaceContext): Boolean {
+        return false
+    }
+
+    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
+        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+        if (blockEntity != null && !level.isClientSide && !player.isCreative) {
+            val stack = ItemStack(this)
+            val serverLevel = level as net.minecraft.server.level.ServerLevel
+            val registryAccess = serverLevel.registryAccess()
+            blockEntity.saveToItem(stack, registryAccess)
+            ItemEntity(level, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, stack).apply {
+                setDefaultPickUpDelay()
+                level.addFreshEntity(this)
+            }
+        }
+        return super.playerWillDestroy(level, pos, state, player)
     }
 
     fun makeShape(): VoxelShape {
@@ -329,6 +388,10 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties) {
         )
 
         return shape
+    }
+
+    override fun newBlockEntity(p_153215_: BlockPos, p_153216_: BlockState): BlockEntity? {
+        return EnderControllerTileEntity(p_153215_, p_153216_)
     }
 
 

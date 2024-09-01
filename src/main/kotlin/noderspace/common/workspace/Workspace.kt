@@ -32,7 +32,7 @@ data class Workspace(
     val users: MutableMap<UUID, User>,
     val description: String = "Default Workspace",
     val uid: UUID = UUID.randomUUID(),
-    val settings: WorkspaceSettings = WorkspaceSettings()
+    var settings: WorkspaceSettings = WorkspaceSettings()
 ) {
 
     /**
@@ -326,11 +326,11 @@ data class Workspace(
          * @param description The description of the new workspace.
          * @return The newly created Workspace object.
          */
-        fun create(name: String, description: String): Workspace {
+        fun create(name: String, description: String, uuid: UUID = UUID.randomUUID()): Workspace {
             val graph = Graph()
             val nodeLibrary = NodeLibrary()
             val users = mutableMapOf<UUID, User>()
-            val workspace = Workspace(graph, nodeLibrary, name, users, description)
+            val workspace = Workspace(graph, nodeLibrary, name, users, description, uuid)
             workspace.save()
             logger.info { "Created new workspace: $name" }
             return workspace

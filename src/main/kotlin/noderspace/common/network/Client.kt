@@ -13,6 +13,10 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
     Endpoint<Client>(),
     Runnable {
 
+    init {
+        ref.set(this)
+    }
+
     private var ipAddress: String = "localhost"
     private var port: Int = 33456
 
@@ -64,7 +68,6 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
             this.uuid = this@Client.uuid
         }, id)
     }
-
 
 
     fun connect(ipAddress: String, port: Int): Client {

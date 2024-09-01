@@ -11,8 +11,12 @@ object ModItems {
 
     val ITEMS = DeferredRegister.createItems(Bpm.ID)
 
-    val NODE_CONTROLLER = ITEMS.registerItem("node_controller") {
-        BlockItem(ModBlocks.NODE_EDITOR_BLOCK.get(), Item.Properties())
+    val ENDER_CONTROLLER = ITEMS.registerItem("ender_pipe_controller") {
+        BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Properties())
+    }
+
+    val ENDER_PROXY = ITEMS.registerItem("ender_pipe_proxy") {
+        BlockItem(ModBlocks.ENDER_PROXY.get(), Item.Properties())
     }
 
     val ENDER_PIPE = ITEMS.registerItem("ender_pipe") {

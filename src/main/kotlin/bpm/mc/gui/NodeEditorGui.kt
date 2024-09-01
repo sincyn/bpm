@@ -9,9 +9,13 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import net.minecraft.world.entity.player.Player
+import noderspace.common.network.Endpoint
+import noderspace.common.workspace.packets.NodeLibraryRequest
+import noderspace.common.workspace.packets.WorkspaceCompileRequest
+import noderspace.common.workspace.packets.WorkspaceSelected
+import java.util.*
 
-class NodeEditorGui(player: Player) : Screen(Component.literal("Node Editor")) {
+class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal("Node Editor")) {
 
     private val io: ImGuiIO get() = ImGui.getIO()
     private var textureTarget: TextureTarget? = null
@@ -21,8 +25,14 @@ class NodeEditorGui(player: Player) : Screen(Component.literal("Node Editor")) {
     override fun init() {
         super.init()
         val window = minecraft!!.window
-        runtime.setDisplaySize(window.guiScaledWidth.toFloat(), window.guiScaledHeight.toFloat())
+//        runtime.setDisplaySize(window.guiScaledWidth.toFloat(), window.guiScaledHeight.toFloat())
         openTime = System.currentTimeMillis()
+//
+        Endpoint.get().send(NodeLibraryRequest())
+        println("WorkspaceSelected $workspaceUuid")
+        Endpoint.get().send(WorkspaceSelected(workspaceUuid))
+        Overlay.skipped = true
+        runtime.openCanvas()
     }
 
     override fun render(pGuiGraphics: GuiGraphics, pMouseX: Int, pMouseY: Int, pPartialTick: Float) {
@@ -36,17 +46,18 @@ class NodeEditorGui(player: Player) : Screen(Component.literal("Node Editor")) {
     }
 
     override fun resize(minecraft: Minecraft, width: Int, height: Int) {
-        super.resize(minecraft, width, height)
-        runtime.setDisplaySize(width.toFloat(), height.toFloat())
+        val window = minecraft.window
+//        runtime.setDisplaySize(window.guiScaledWidth.toFloat(), window.guiScaledHeight.toFloat())
     }
 
+
     override fun keyPressed(pKeyCode: Int, pScanCode: Int, pModifiers: Int): Boolean {
-        io.setKeysDown(pKeyCode, true)
+//        io.setKeysDown(pKeyCode, true)
         return super.keyPressed(pKeyCode, pScanCode, pModifiers)
     }
 
     override fun keyReleased(pKeyCode: Int, pScanCode: Int, pModifiers: Int): Boolean {
-        io.setKeysDown(pKeyCode, false)
+//        io.setKeysDown(pKeyCode, false)
         return super.keyReleased(pKeyCode, pScanCode, pModifiers)
     }
 
@@ -55,23 +66,23 @@ class NodeEditorGui(player: Player) : Screen(Component.literal("Node Editor")) {
     }
 
     override fun mouseClicked(pMouseX: Double, pMouseY: Double, pButton: Int): Boolean {
-        if (pButton == 1) {  // 1 is right-click
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - openTime < rightClickDelay) {
-                return true  // Ignore right-clicks before the delay has passed
-            }
-        }
-        io.setMouseDown(pButton, true)
+//        if (pButton == 1) {  // 1 is right-click
+//            val currentTime = System.currentTimeMillis()
+//            if (currentTime - openTime < rightClickDelay) {
+//                return true  // Ignore right-clicks before the delay has passed
+//            }
+//        }
+//        io.setMouseDown(pButton, true)
         return super.mouseClicked(pMouseX, pMouseY, pButton)
     }
 
     override fun mouseReleased(pMouseX: Double, pMouseY: Double, pButton: Int): Boolean {
-        io.setMouseDown(pButton, false)
+//        io.setMouseDown(pButton, false)
         return super.mouseReleased(pMouseX, pMouseY, pButton)
     }
 
     override fun mouseScrolled(p_94686_: Double, p_94687_: Double, p_94688_: Double, p_294830_: Double): Boolean {
-        io.mouseWheel = p_294830_.toFloat()
+//        io.mouseWheel = p_294830_.toFloat()
         return super.mouseScrolled(p_94686_, p_94687_, p_94688_, p_294830_)
     }
 
@@ -80,11 +91,21 @@ class NodeEditorGui(player: Player) : Screen(Component.literal("Node Editor")) {
         return super.charTyped(pChar, pModifiers)
     }
 
+    override fun onClose() {
+        super.onClose()
+        //Fix for nodes not being removed when closing the gui
+        runtime.closeCanvas()
+        Overlay.skipped = false
+        Endpoint.get().send(WorkspaceCompileRequest(workspaceUuid))
+
+    }
+
     override fun isPauseScreen(): Boolean = false
 
     companion object {
-        fun open(player: Player) {
-            Minecraft.getInstance().setScreen(NodeEditorGui(player))
+
+        fun open(uuid: UUID) {
+            Minecraft.getInstance().setScreen(NodeEditorGui(uuid))
         }
     }
 }

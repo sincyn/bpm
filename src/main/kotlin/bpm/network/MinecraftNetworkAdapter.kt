@@ -26,7 +26,7 @@ import noderspace.common.network.Network
 import noderspace.common.packets.Packet
 import noderspace.common.serial.Serial
 
-class MinecraftNetworkAdapter {
+object MinecraftNetworkAdapter {
 
     fun registerPayloads(event: RegisterPayloadHandlersEvent) {
         val registrar = event.registrar(Bpm.ID).versioned("1.0.0")
@@ -47,14 +47,15 @@ class MinecraftNetworkAdapter {
         return object : StreamCodec<FriendlyByteBuf, MinecraftPacketPayload<T>> {
             override fun decode(buf: FriendlyByteBuf): MinecraftPacketPayload<T> {
                 val buffer = Buffer.wrap(buf.readByteArray())
-                val packet = Serial[packetType].deserialize(buffer)
-                return MinecraftPacketPayload(packet)
+                val packet = Network.new(packetType.kotlin) ?: error("Failed to create packet")
+                packet.deserialize(buffer)
+                return MinecraftPacketPayload(packet as T)
             }
 
 
             override fun encode(buf: FriendlyByteBuf, instance: MinecraftPacketPayload<T>) {
                 val buffer = Buffer.allocate()
-                Serial[packetType].serialize(buffer, instance.packet)
+                instance.packet.serialize(buffer)
                 buf.writeByteArray(buffer.finish())
             }
         }
@@ -84,7 +85,12 @@ class MinecraftNetworkAdapter {
         companion object {
 
             fun <T : Packet> typeOf(packetClass: Class<T>): CustomPacketPayload.Type<MinecraftPacketPayload<T>> =
-                CustomPacketPayload.Type(ResourceLocation.fromNamespaceAndPath(Bpm.ID, packetClass.simpleName))
+                CustomPacketPayload.Type(
+                    ResourceLocation.fromNamespaceAndPath(
+                        Bpm.ID,
+                        packetClass.simpleName.lowercase()
+                    )
+                )
         }
 
         override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = typeOf(packet.javaClass)
@@ -97,11 +103,11 @@ class MinecraftNetworkAdapter {
         override fun handle(payload: MinecraftPacketPayload<T>, context: IPayloadContext) {
             val endpoint = Endpoint.get()
             when (context.flow()) {
-                PacketFlow.SERVERBOUND -> {
+                PacketFlow.CLIENTBOUND -> {
                     endpoint.worker.queue(payload.packet, context.player().uuid)
                 }
 
-                PacketFlow.CLIENTBOUND -> {
+                PacketFlow.SERVERBOUND -> {
                     endpoint.worker.queue(payload.packet, NetUtils.DefaultUUID)
                 }
             }
@@ -127,20 +133,3 @@ class PlayerTarget(val player: ServerPlayer) : PacketTarget()
 object AllPlayersTarget : PacketTarget()
 class NearbyPlayersTarget(val pos: Vec3, val radius: Double, val dimension: ResourceKey<Level>) : PacketTarget()
 
-class Bpm {
-    companion object {
-
-        const val ID = "bpm"
-    }
-
-    private val networkAdapter = MinecraftNetworkAdapter()
-
-    @SubscribeEvent
-    fun onRegisterPayloads(event: RegisterPayloadHandlersEvent) {
-        networkAdapter.registerPayloads(event)
-    }
-
-    fun sendPacket(packet: Packet, target: PacketTarget) {
-        networkAdapter.sendPacket(packet, target)
-    }
-}
