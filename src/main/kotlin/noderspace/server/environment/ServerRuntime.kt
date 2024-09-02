@@ -5,6 +5,7 @@ import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
 import noderspace.common.network.Network.new
+import noderspace.common.network.Server
 import noderspace.common.network.listener
 import noderspace.common.packets.Packet
 import noderspace.common.packets.internal.ConnectRequest
@@ -23,10 +24,12 @@ import noderspace.common.workspace.graph.User
 import noderspace.common.workspace.packets.*
 import org.joml.Vector2f
 import org.joml.Vector4i
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-object Environment : Listener {
+object ServerRuntime : Listener {
+
 
     private val logger = KotlinLogging.logger { }
 
@@ -138,58 +141,13 @@ object Environment : Listener {
     override fun onTick(delta: Float, tick: Int): Unit {
         for (workspace in workspaces.values) {
             if (workspace.needsRecompile) continue
-            //Calls our redstone event functions
-//            val redstone = EvalContext.callFunction(workspace, "Redstone", null)
-//            if (redstone.hasFailure && !redstone.isNotFound) {
-//                //This is a real error, the function was found and failed to execute
-//                logger.error { "Failed to call Redstone function: ${redstone.message}" }
-//                workspace.needsRecompile = true
-//            } else if (redstone.isNotFound) {
-//                //We don't need to recompile if it's not found, this is normal
-//                workspace.needsRecompile = false
-//            }
-
+            //Executes the function Tick, every tick. Waits for recompilation if the workspace needs it (there was an error)
             workspace.needsRecompile = !execute(workspace, "Tick")
-            //Recompile only if the redstone function failed to execute
+            //Only if there wasn't an error in the tick function, we call the Redstone function
             if (!workspace.needsRecompile) {
                 workspace.needsRecompile = !execute(workspace, "Redstone")
             }
         }
-//            if (redstone.failure!!.error.contains("Group Redstone not found")) {
-//                workspace.needsRecompile = false
-//                return
-//            } else {
-//                logger.error { "Failed to call Redstone function: ${redstone.failure.error}" }
-//                sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
-//                    icon = 0xf071
-//                    message = redstone.failure.error ?: "Failed to call Run function"
-//                    header = "Error: Failed to call Redstone function"
-//                    color = "#f54242"
-//                    lifetime = 2.5f
-//                    type = NotifyMessage.NotificationType.ERROR
-//                })
-//                workspace.needsRecompile = true
-//            }
-
-
-        // Calls the tick function(s). Can be more than one.
-//            val tick = EvalContext.callFunction(workspace, "Tick")
-//            if (tick.failure!!.error.contains("Group Tick not found")) {
-//                workspace.needsRecompile = false
-//                return
-//            } else {
-//                logger.error { "Failed to call Tick function: ${tick.failure.error}" }
-//                sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
-//                    icon = 0xf071
-//                    message = redstone.failure.error ?: "Failed to call Run function"
-//                    header = "Error: Failed to call Redstone function"
-//                    color = "#f54242"
-//                    lifetime = 2.5f
-//                    type = NotifyMessage.NotificationType.ERROR
-//                })
-//                workspace.needsRecompile = true
-//            }
-//        }
     }
 
     /**
@@ -484,6 +442,8 @@ object Environment : Listener {
         server.send(response, sendTo)
         logger.info { "Created new workspace for client $sendTo: ${workspace.workspaceName}" }
     }
+
+    operator fun get(uuid: UUID): Workspace? = workspaces[uuid]
 
 
     /**

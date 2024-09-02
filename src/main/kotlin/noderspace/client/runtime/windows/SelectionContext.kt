@@ -17,7 +17,6 @@ import java.util.*
 
 class SelectionContextOverlay(private val workspace: Workspace) {
 
-    private val endpoint = Client()
     private var isOpen = false
     private var animationProgress = 0f
     private val animationDuration = 0.3f
@@ -88,7 +87,7 @@ class SelectionContextOverlay(private val workspace: Workspace) {
         ImGui.pushStyleColor(ImGuiCol.Button, deleteButtonColor)
         if (ImGui.button("Delete All Selected Nodes", -1f, 0f)) {
             selectedNodes.forEach { nodeId ->
-                endpoint.send(NodeDeleteRequest(nodeId))
+                Client { send(NodeDeleteRequest(nodeId)) }
             }
         }
         ImGui.popStyleColor()
@@ -105,7 +104,7 @@ class SelectionContextOverlay(private val workspace: Workspace) {
         }
         ImGui.pushStyleColor(ImGuiCol.Button, deleteButtonColor)
         if (ImGui.button("Delete Node", -1f, 0f)) {
-            endpoint.send(NodeDeleteRequest(node.uid))
+            Client { send(NodeDeleteRequest(node.uid)) }
         }
         ImGui.popStyleColor()
 

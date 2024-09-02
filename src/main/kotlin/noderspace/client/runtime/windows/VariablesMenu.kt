@@ -63,8 +63,6 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
     private var popupPosition: Vector2f? = null
     private var isPopupInteractionStarted = false
 
-    // Network client
-    private val client by lazy { Client() }
 
     // Variable expansion
     private var expandedVariable: String? = null
@@ -362,7 +360,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
             )
 
             if (updated) {
-                client.send(VariableUpdateRequest(name, Property.Object().apply {
+                Client{}.send(VariableUpdateRequest(name, Property.Object().apply {
                     this["type"] = Property.String(variable::class.simpleName!!)
                     this["value"] = variable
                 }))
@@ -451,7 +449,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
                 },
                 WheelAction("Delete", FontAwesome.Trash) {
 //                    workspace.removeVariable(name)
-                    Client().send(VariableDeleteRequest(name))
+                    Client{}.send(VariableDeleteRequest(name))
                 }
             ),
             isTopLevel = true,
@@ -647,7 +645,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
             "Color" -> Property.Vec4i(Vector4i(255, 255, 255, 255))
             else -> return
         }
-        client.send(VariableCreateRequest(name,
+        Client{}.send(VariableCreateRequest(name,
             Property.Object().apply {
                 this["type"] = Property.String(type)
                 this["value"] = property

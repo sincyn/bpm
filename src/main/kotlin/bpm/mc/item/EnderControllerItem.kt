@@ -6,6 +6,7 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.*
+import noderspace.client.runtime.ClientRuntime
 import java.util.UUID
 
 class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Properties().rarity(Rarity.EPIC)) {
@@ -21,6 +22,9 @@ class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Pro
             val tag = data.copyTag()
             val attachments = tag.getCompound("neoforge:attachments")
             val uuid = attachments.getCompound("bpm:uuid").getUUID("value")
+            //This has the side effect of initializing the workspace if it doesn't exist client side by requesting it from the server
+
+            val workspace = ClientRuntime[uuid]
             //New line
             components.add(
                 Component.literal("========================================")
@@ -30,13 +34,17 @@ class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Pro
             components.add(
                 Component.literal("")
             )
+            val nodeCount = Component.literal(workspace?.graph?.nodes?.size?.toString() ?: "none!")
+                .withStyle(ChatFormatting.DARK_GRAY)
+                .withStyle(ChatFormatting.ITALIC)
+            val connectionCount = Component.literal(workspace?.graph?.getLinks()?.size?.toString() ?: "none!")
+                .withStyle(ChatFormatting.DARK_GRAY)
+                .withStyle(ChatFormatting.ITALIC)
             components.add(
                 Component.literal("Nodes").withStyle(ChatFormatting.AQUA).withStyle(ChatFormatting.ITALIC)
                     .append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
                     .append(
-                        Component.literal("69").withStyle(ChatFormatting.DARK_GRAY)
-                            .withStyle(ChatFormatting.OBFUSCATED)
-                            .withStyle(ChatFormatting.ITALIC)
+                        nodeCount
                     )
             )
             //New line
@@ -47,10 +55,7 @@ class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Pro
                 Component.literal("Connections").withStyle(ChatFormatting.AQUA).withStyle(ChatFormatting.ITALIC)
                     .append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
                     .append(
-                        Component.literal("69420").withStyle(ChatFormatting.DARK_GRAY)
-                            .withStyle(ChatFormatting.OBFUSCATED)
-                            .withStyle(ChatFormatting.ITALIC)
-
+                        connectionCount
                     )
             )
 

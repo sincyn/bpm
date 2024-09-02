@@ -5,12 +5,9 @@ import bpm.mc.block.EnderControllerBlock
 import bpm.mc.block.EnderControllerTileEntity
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
-import net.minecraft.references.Blocks
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.AirBlock
-import net.minecraft.world.level.block.state.BlockState
 import noderspace.common.logging.KotlinLogging
-import noderspace.server.environment.Environment
+import noderspace.server.environment.ServerRuntime
 import java.util.concurrent.ConcurrentHashMap
 
 object PipeNetworkManager {
@@ -36,7 +33,7 @@ object PipeNetworkManager {
     private fun onControllerRemoved(entity: EnderControllerTileEntity) {
         val uuid = entity.getUUID()
         //We should locate the workspace in the environment, and remove any event functions that are associated with the controller
-        Environment.closeWorkspace(uuid)
+        ServerRuntime.closeWorkspace(uuid)
     }
 
 
@@ -45,7 +42,7 @@ object PipeNetworkManager {
         //We should locate the workspace in the environment, and add any event functions that are associated with the controller
 //        Environment.openWorkspace(uuid)
         //We should recompile the workspace at this point
-        Environment.recompileWorkspace(uuid)
+        ServerRuntime.recompileWorkspace(uuid)
     }
 
     fun onPipeRemoved(pipe: BasePipeBlock, level: Level, pos: BlockPos) {

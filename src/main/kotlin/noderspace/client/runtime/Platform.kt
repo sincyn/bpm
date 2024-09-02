@@ -1,7 +1,5 @@
 package noderspace.client.runtime
 
-import noderspace.common.logging.KotlinLogging
-import noderspace.common.network.Listener
 import org.joml.Vector2f
 import org.lwjgl.glfw.*
 import org.lwjgl.glfw.GLFW.glfwGetFramebufferSize
@@ -73,7 +71,7 @@ object Platform {
      * @param key the key code to check
      * @return true if the key is being pressed, false otherwise
      */
-    fun isKeyDown(key: Runtime.Key): Boolean = /*keyStateMap[key] ?: false*/
+    fun isKeyDown(key: ClientRuntime.Key): Boolean = /*keyStateMap[key] ?: false*/
         glfwGetKey(windowHandle, key.value) == GLFW.GLFW_PRESS
 
 
@@ -83,7 +81,7 @@ object Platform {
      * @param key the integer value representing the key to check
      * @return true if the key is released, false otherwise
      */
-    fun isKeyUp(key: Runtime.Key): Boolean = /*!isKeyDown(key)*/
+    fun isKeyUp(key: ClientRuntime.Key): Boolean = /*!isKeyDown(key)*/
         glfwGetKey(windowHandle, key.value) == GLFW.GLFW_RELEASE
 
     /**
@@ -92,7 +90,7 @@ object Platform {
      * @param button the button code of the mouse button to be checked.
      * @return true if the specified mouse button is currently pressed, false otherwise.
      */
-    fun isMouseDown(button: Runtime.MouseButton): Boolean = /*mouseButtonStateMap[button] ?: false*/
+    fun isMouseDown(button: ClientRuntime.MouseButton): Boolean = /*mouseButtonStateMap[button] ?: false*/
         GLFW.glfwGetMouseButton(windowHandle, button.value) == GLFW.GLFW_PRESS
 
     /**
@@ -101,7 +99,7 @@ object Platform {
      * @param button The mouse button to check for release.
      * @return `true` if the mouse button is released, `false` otherwise.
      */
-    fun isMouseUp(button: Runtime.MouseButton): Boolean =
+    fun isMouseUp(button: ClientRuntime.MouseButton): Boolean =
         GLFW.glfwGetMouseButton(windowHandle, button.value) == GLFW.GLFW_RELEASE
 
 

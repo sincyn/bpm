@@ -10,11 +10,10 @@ import imgui.flag.ImGuiKey
 import imgui.flag.ImGuiMouseCursor
 import imgui.flag.ImGuiStyleVar
 import imgui.internal.ImRect
-import imgui.type.ImInt
 import imgui.type.ImString
 import noderspace.client.font.Fonts
 import noderspace.client.runtime.Platform
-import noderspace.client.runtime.Runtime
+import noderspace.client.runtime.ClientRuntime
 import noderspace.common.utils.FontAwesome
 import org.joml.Vector2f
 import kotlin.math.*
@@ -183,7 +182,7 @@ fun handleUniversalTextInput(
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Backspace)) -> handleBackspace(newState)
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Delete)) -> handleDelete(newState)
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.LeftArrow)) -> {
-                if (Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)) {
+                if (Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL)) {
                     handleCtrlLeftArrow(newState)
                 } else {
                     handleLeftArrow(newState)
@@ -191,7 +190,7 @@ fun handleUniversalTextInput(
             }
 
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.RightArrow)) -> {
-                if (Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)) {
+                if (Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL)) {
                     handleCtrlRightArrow(newState)
                 } else {
                     handleRightArrow(newState)
@@ -206,18 +205,18 @@ fun handleUniversalTextInput(
 
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Home)) -> handleHome(newState)
             ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.End)) -> handleEnd(newState)
-            Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_A) -> handleSelectAll(
+            Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_A) -> handleSelectAll(
                 newState
             )
 
-            Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_C) -> handleCopy(newState)
-            Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_V) -> handlePaste(newState)
-            Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_X) -> handleCut(newState)
+            Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_C) -> handleCopy(newState)
+            Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_V) -> handlePaste(newState)
+            Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) && ImGui.isKeyPressed(GLFW.GLFW_KEY_X) -> handleCut(newState)
             else -> {
                 // Handle text input
                 for (key in 32..126) { // ASCII printable characters
                     if (ImGui.isKeyPressed(key)) {
-                        val char = if (Platform.isKeyDown(Runtime.Key.LEFT_SHIFT) || Platform.isKeyDown(Runtime.Key.RIGHT_SHIFT)) {
+                        val char = if (Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT) || Platform.isKeyDown(ClientRuntime.Key.RIGHT_SHIFT)) {
                             key.toChar().uppercaseChar()
                         } else {
                             key.toChar().lowercaseChar()
@@ -409,7 +408,7 @@ private fun handleCtrlLeftArrow(state: TextInputState) {
     }
 
     state.cursorPosition = newPosition
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -432,7 +431,7 @@ private fun handleCtrlRightArrow(state: TextInputState) {
     }
 
     state.cursorPosition = newPosition
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -539,7 +538,7 @@ private fun handleDelete(state: TextInputState) {
 
 private fun handleLeftArrow(state: TextInputState) {
     if (state.cursorPosition > 0) state.cursorPosition--
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -549,7 +548,7 @@ private fun handleLeftArrow(state: TextInputState) {
 
 private fun handleRightArrow(state: TextInputState) {
     if (state.cursorPosition < state.text.length) state.cursorPosition++
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -560,7 +559,7 @@ private fun handleRightArrow(state: TextInputState) {
 private fun handleHome(state: TextInputState) {
     val currentLineStart = state.text.lastIndexOf('\n', state.cursorPosition - 1) + 1
     state.cursorPosition = currentLineStart
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -570,7 +569,7 @@ private fun handleHome(state: TextInputState) {
 
 private fun handleEnd(state: TextInputState) {
     state.cursorPosition = state.text.length
-    if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+    if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
         state.selectionStart = state.cursorPosition
         state.selectionEnd = state.cursorPosition
     } else {
@@ -1057,8 +1056,8 @@ fun slider(
             val mouseX = ImGui.getMousePos().x
             val delta = mouseX - newState.lastMouseX
 
-            val isShiftHeld = Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)
-            val isControlHeld = Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)
+            val isShiftHeld = Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)
+            val isControlHeld = Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL)
             if (isShiftHeld) {
                 // Precise movement without acceleration when Shift is held
                 newState.value = (newState.value + delta.toInt()).coerceIn(min, max)
@@ -1119,7 +1118,7 @@ fun renderButton(
     val textY = y + (height - textSize.y) / 2
     drawList.addText(textX, textY, textColor, label)
 
-    return isHovered && Platform.isMouseDown(Runtime.MouseButton.LEFT)
+    return isHovered && Platform.isMouseDown(ClientRuntime.MouseButton.LEFT)
 }
 
 var sliderState = SliderIntState()
@@ -1596,8 +1595,8 @@ private fun handleNumberInput(
 
             // Adjust sensitivity based on modifier keys
             state.dragSensitivity = when {
-                Platform.isKeyDown(Runtime.Key.LEFT_SHIFT) -> 0.001f
-                Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) -> 0.1f
+                Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT) -> 0.001f
+                Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) -> 0.1f
                 else -> 0.01f
             }
 
@@ -1665,7 +1664,7 @@ private fun formatNumberValue(value: Float, decimalPlaces: Int): String {
 private fun handleKeyboardInput(state: InputState) {
     for (key in 32..126) { // ASCII printable characters
         if (ImGui.isKeyPressed(key)) {
-            val char = if (Platform.isKeyDown(Runtime.Key.LEFT_SHIFT) || Platform.isKeyDown(Runtime.Key.RIGHT_SHIFT)) {
+            val char = if (Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT) || Platform.isKeyDown(ClientRuntime.Key.RIGHT_SHIFT)) {
                 key.toChar().uppercaseChar()
             } else {
                 key.toChar().lowercaseChar()
@@ -1730,8 +1729,8 @@ private fun handleDragInput(
 
             // Adjust sensitivity based on modifier keys
             state.dragSensitivity = when {
-                Platform.isKeyDown(Runtime.Key.LEFT_SHIFT) -> 0.001f
-                Platform.isKeyDown(Runtime.Key.LEFT_CONTROL) -> 0.1f
+                Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT) -> 0.001f
+                Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL) -> 0.1f
                 else -> 0.01f
             }
 

@@ -6,15 +6,14 @@ import imgui.ImGuiIO
 import imgui.flag.ImGuiConfigFlags
 import imgui.gl3.ImGuiImplGl3
 import imgui.glfw.ImGuiImplGlfw
+import net.minecraft.client.Minecraft
+import net.neoforged.api.distmarker.Dist
+import net.neoforged.api.distmarker.OnlyIn
 import noderspace.client.font.FontType
 import noderspace.client.font.Fonts
-import noderspace.client.runtime.renders.Renderspace
-import noderspace.client.runtime.renders.Window
 import noderspace.client.runtime.windows.CanvasContext
 import noderspace.client.runtime.windows.CanvasWindow
-import noderspace.client.runtime.windows.ProjectListWindow
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.managers.Heartbearts
 import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
@@ -31,9 +30,7 @@ import noderspace.common.workspace.packets.*
 import org.lwjgl.glfw.GLFW
 import java.nio.file.Path
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -41,31 +38,49 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * This should be the only class needing to be implemented for a new platform.
  */
-class Runtime(
+@OnlyIn(Dist.CLIENT)
+object ClientRuntime : Listener {
+
     /**
      * The client uid that the runtime should use to connect to the server
      */
-    private val clientUid: UUID,
-) : Listener {
-
-    private var selectionWindow: Window? = null
-    private val dockspace = Renderspace("Runtime")
+    private val clientUid: UUID by lazy { Minecraft.getInstance().player?.uuid ?: error("Player UUID not available") }
+    private val cachedWorkspaces: ConcurrentHashMap<UUID, Workspace> = ConcurrentHashMap()
     private var running = false
-    private var workspaceWindow: Window? = null
+    //Caches the workspace into memory
     internal var workspace: Workspace? = null
-    private val connectionExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    private var reconnectAttempts = 0
-    private val maxReconnectAttempts = 5
-    private val reconnectDelay = 5L // seconds
+        set(value) {
+            field = value
+            if (value != null) {
+                cachedWorkspaces[value.uid] = value
+            }
+        }
+
     /**This stores the glfw backend implementation for imgui**/
     private lateinit var imGuiGlfw: ImGuiImplGlfw
     private lateinit var imGuiGl3: ImGuiImplGl3
-    private var hasRequestedWorkspaceLibrary = false
     private var queuedWorkspaceLibrary: WorkspaceLibrary? = null
     private lateinit var io: ImGuiIO
     private val started = AtomicBoolean(false)
-    private val _client = Client(clientUid)
     private var canvasWindow: CanvasWindow? = null
+    private val logger = KotlinLogging.logger { }
+    override val client = Client {
+        createClient(this)
+    }
+
+    operator fun get(workspaceUid: UUID): Workspace? {
+
+        val cahced =  cachedWorkspaces[workspaceUid]
+        if(cahced != null){
+            return cahced
+        }
+        //We request the workspace from the server
+        client.send(new<WorkspaceSelected> {
+            this.workspaceUid = workspaceUid
+        })
+
+        return null
+    }
 
     /**
      * Represents the currently selected node in the application.
@@ -94,7 +109,6 @@ class Runtime(
      * @param client The client to be set up.
      */
     private fun createClient(client: Client) = client.install(this)
-//        .install<Heartbearts>()
         .install<Schemas>(Path.of(""), Endpoint.Side.CLIENT)
         .install<CanvasContext>().install<Overlay2D>()
 
@@ -102,7 +116,7 @@ class Runtime(
     /**
      * initialize the runtime with the given window handle
      */
-    fun start(windowHandle: Long): Runtime {
+    fun start(windowHandle: Long): ClientRuntime {
         if (started.getAndSet(true)) {
             logger.warn { "Runtime has already been started" }
             return this
@@ -123,7 +137,7 @@ class Runtime(
             return this
         }
 
-        createClient(_client).start()
+        client.start()
         running = true
         logger.info { "Runtime has started" }
         return this
@@ -173,94 +187,21 @@ class Runtime(
     /**
      * Should be called once per frame to process events from the main thread
      */
-    fun process(pollEvents: Boolean = false) {
+    fun process() {
         if (!running) return
-
-//        // Check if we need to request the workspace library
-//        if (workspace == null && selectionWindow == null && !hasRequestedWorkspaceLibrary) {
-//            client.send(new<WorkspaceLibraryRequest> {
-//                logger.info { "Requesting workspace library" }
-//            })
-//            hasRequestedWorkspaceLibrary = true
-//        }
-
-        // Check if we need to show the queued workspace library
-//        queuedWorkspaceLibrary?.let { workspaceLibrary ->
-//            if (workspace == null && selectionWindow == null) {
-//                showWorkspaceLibrary(workspaceLibrary)
-//                queuedWorkspaceLibrary = null
-//            }
-//        }
-
-        // Draw the dockspace
 
         if (canvasWindow != null) {
             canvasWindow?.render()
         }
-//        dockspace.process()
-        // Poll events from the main thread
 
     }
 
-    fun setDisplaySize(width: Float, height: Float) {
-        io.displaySize.set(width, height)
-//        ImGui.getStyle().scaleAllSizes(1.0f)  // Adjust scale if needed
-    }
 
-    private fun showWorkspaceLibrary(workspaceLibrary: WorkspaceLibrary) {
-        selectionWindow = dockspace.addFloatingWindow(
-            "Workspaces", ProjectListWindow(this, workspaceLibrary)
-        ).apply {
-            val sizes = Platform.frameSize
-            centered = true
-            size = { sizes.x / 2f to sizes.y / 2 }
-        }
-        logger.info { "Showing workspace library: ${workspaceLibrary.workspaces}" }
-    }
-
-
-    private fun connectWithRetry(host: String, port: Int) {
-        reconnectAttempts = 0
-        connectionExecutor.execute {
-            while (running && reconnectAttempts < maxReconnectAttempts) {
-                try {
-                    logger.info { "Connected to server: $host:$port" }
-                    reconnectAttempts = 0
-                    break
-                } catch (e: Exception) {
-                    reconnectAttempts++
-                    logger.error { "Failed to connect to server (attempt $reconnectAttempts/$maxReconnectAttempts): $e" }
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        Thread.sleep(reconnectDelay * 1000)
-                    }
-                }
-            }
-            if (reconnectAttempts == maxReconnectAttempts) {
-                logger.error { "Failed to connect after $maxReconnectAttempts attempts. Giving up." }
-            }
-        }
-    }
-
-    private fun startConnectionMonitor(host: String, port: Int) {
-        connectionExecutor.scheduleAtFixedRate({
-            if (running && !client.connected) {
-                logger.warn { "Connection lost. Attempting to reconnect..." }
-                connectWithRetry(host, port)
-            }
-        }, 5, 5, TimeUnit.SECONDS)
-    }
-
-
-//    fun connect() = client.connect()
-
-    fun connect(host: String, port: Int) {
-//        connectWithRetry(host, port)
-//        startConnectionMonitor(host, port)
+    fun connect() {
         if (!client.connected) {
-            client.connect(host, port)
+            client.connect()
         }
     }
-
 
     fun disconnect() {
         if (client.connected) {
@@ -307,7 +248,6 @@ class Runtime(
         is ConnectResponsePacket -> {
             if (!packet.valid) {
                 logger.error { "Connection was not valid" }
-//                        disconnected(connection)
                 client.terminate()
             }
             synchronized(client.listeners) {
@@ -335,10 +275,6 @@ class Runtime(
                 canvasWindow?.workspace = packet.workspace!!
             }
             canvasWindow?.open()
-
-
-//            selectionWindow?.let { dockspace.removeFloatingWindow(it) }
-//            selectionWindow = null
             queuedWorkspaceLibrary = null // Clear any queued workspace library
             logger.info { "Received workspace load response: $packet" }
         }
@@ -486,11 +422,5 @@ class Runtime(
             fun from(value: Int): Key = this.entries.getOrDefault(value, SPACE)
         }
     }
-
-    companion object {
-
-        private val logger = KotlinLogging.logger { }
-    }
-
 
 }

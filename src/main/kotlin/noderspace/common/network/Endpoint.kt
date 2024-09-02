@@ -130,7 +130,6 @@ abstract class Endpoint<T : Endpoint<T>> {
         Runtime.getRuntime().addShutdownHook(shutdown)
         runningRef.set(true)
         logger.info { "Endpoint has be registered" }
-
         if (!isSerializerRegistered) registerSerializers()
         installListeners()
         logger.info { "Serializers have been regsitered" }
@@ -375,8 +374,8 @@ abstract class Endpoint<T : Endpoint<T>> {
 
     companion object {
 
-        internal val serverRef: AtomicReference<Endpoint<*>> = AtomicReference()
-        internal val clientRef: AtomicReference<Endpoint<*>> = AtomicReference()
+        internal val serverRef: AtomicReference<Endpoint<*>> = AtomicReference(null)
+        internal val clientRef: AtomicReference<Endpoint<*>> = AtomicReference(null)
 
         private val logger = KotlinLogging.logger { }
 

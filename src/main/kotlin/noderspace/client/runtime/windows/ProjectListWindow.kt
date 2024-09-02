@@ -9,7 +9,7 @@ import imgui.type.ImString
 import noderspace.client.font.FontType
 import noderspace.client.font.Fonts
 import noderspace.client.render.IRender
-import noderspace.client.runtime.Runtime
+import noderspace.client.runtime.ClientRuntime
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.sizeOf
 import noderspace.common.packets.internal.Time
@@ -18,7 +18,7 @@ import java.util.UUID
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-class ProjectListWindow(private val runtime: Runtime, var library: WorkspaceLibrary) : IRender {
+class ProjectListWindow(private val runtime: ClientRuntime, var library: WorkspaceLibrary) : IRender {
 
     private val baseWidth = 1280f // Base width for scaling
     private val baseHeight = 920f // Base height for scaling

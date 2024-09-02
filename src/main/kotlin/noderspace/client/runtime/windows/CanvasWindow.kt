@@ -5,7 +5,7 @@ import imgui.flag.*
 import imgui.type.ImString
 import noderspace.client.font.Fonts
 import noderspace.client.render.IRender
-import noderspace.client.runtime.Runtime
+import noderspace.client.runtime.ClientRuntime
 import noderspace.client.utils.toVec2f
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.use
@@ -29,7 +29,7 @@ import org.joml.Vector4i
 import java.util.*
 import kotlin.math.pow
 
-class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRender {
+class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime) : IRender {
 
 
     private val headerFamily get() = Fonts.getFamily("Inter")["Bold"]
@@ -258,7 +258,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
 
         renderToolTips()
 
-        if(canvasCtx.isDraggingNode){
+        if (canvasCtx.isDraggingNode) {
         }
     }
 
@@ -843,7 +843,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                         val newValue = buffer.get()
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.String(newValue)
-                            Client().send(EdgePropertyUpdate(edge.uid, this))
+                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -859,7 +859,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     if (ImGui.dragFloat("##value", buffer, 0.1f, min, max)) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Float(buffer[0])
-                            Client().send(EdgePropertyUpdate(edge.uid, this))
+                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -875,7 +875,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     if (ImGui.dragInt("##value", buffer, 0.1f, min.toFloat(), max.toFloat())) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Int(buffer[0])
-                            Client().send(EdgePropertyUpdate(edge.uid, this))
+                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -894,7 +894,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     ) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = boolValue
-                            Client().send(EdgePropertyUpdate(edge.uid, this))
+                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                 }

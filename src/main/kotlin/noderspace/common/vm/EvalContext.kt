@@ -122,7 +122,7 @@ object EvalContext {
             get() = this is Failure
 
         val isRealFailure: Boolean
-            get() = this is Failure && !isNotFound
+            get() = this is Failure && !isNotFound && !isWorkspaceInvalid
 
         val hasFailure: Boolean
             get() = when (this) {
@@ -150,6 +150,9 @@ object EvalContext {
 
         //True when all failures are GroupNotFound
         val isNotFound get() = failures.all { it is GroupNotFound }
+
+        //True when all failures are InvalidWorkspace
+        val isWorkspaceInvalid get() = failures.all { it is InvalidWorkspace }
 
 
         override fun toString(): String = message

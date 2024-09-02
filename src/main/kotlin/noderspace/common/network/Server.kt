@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.atomic.AtomicBoolean
 
-class Server(private val port: Int) : Endpoint<Server>(), Runnable {
+class Server() : Endpoint<Server>() {
 
 
     init {
@@ -31,8 +31,6 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
     // Stores the connections to the server
     private val clients: ConcurrentMap<UUID, Endpoint<ClientWorker>> = ConcurrentHashMap()
     private val cachedClientPlayers: ConcurrentMap<UUID, PlayerTarget> = ConcurrentHashMap()
-    private var socket: ServerSocket? = null
-    private val thread = Thread(this, "Network Server")
     override val worker = Worker(this)
     private val server: MinecraftServer by lazy {
         ServerLifecycleHooks.getCurrentServer() ?: error("Server not available")
@@ -55,39 +53,13 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
      */
     override fun initiate() {
         try {
-//            socket = ServerSocket(port)
-            thread.start()
             worker.start()
-            logger.info { "Server started on port $port" }
         } catch (e: Exception) {
             logger.error(e) { "Failed to start server" }
             return
         }
         //TODO: relay to listeners
     }
-
-
-    /**
-     * Runs the server and accepts incoming client connections.
-     */
-    override fun run() {
-//        while (runningRef.get()) {
-//            try {
-//                val client = socket?.accept() ?: continue
-//                val connection = Connection(UUID.randomUUID(), Side.CLIENT, client)
-//                logger.info { "Starting worker for ${connection.uuid}" }
-//                val worker = ClientWorker(connection)
-//                worker.initiate()
-//                clients[connection.uuid] = worker
-//                clientExecutors.execute(worker)
-//            } catch (e: SocketException) {
-//                runningRef.set(false)
-//                logger.error(e) { "Failed to accept client connection" }
-//            }
-//        }
-//        terminate()
-    }
-
 
     /**
      * This should stop the server or disconnect from the server depending on the implementation.
@@ -186,51 +158,13 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
      * @property thread The Thread used to execute the run() method.
      * @property logger The logger used for logging.
      */
-    private inner class ClientWorker(private val connection: Connection) : Endpoint<ClientWorker>(), Runnable {
+    private inner class ClientWorker(private val connection: Connection) : Endpoint<ClientWorker>() {
 
         private val running: AtomicBoolean = AtomicBoolean(false)
         override val worker get() = this@Server.worker
 
         private val logger = KotlinLogging.logger {}
 
-        /**
-         * When an object implementing interface `Runnable` is used
-         * to create a thread, starting the thread causes the object's
-         * `run` method to be called in that separately executing
-         * thread.
-         *
-         *
-         * The general contract of the method `run` is that it may
-         * take any action whatsoever.
-         *
-         * @see java.lang.Thread.run
-         */
-        override fun run() {
-            while (running.get()) {
-//                val packet = receive(connection) ?: continue
-//                when (packet) {
-//                    is DisconnectPacket -> {
-//                        disconnected(connection)
-//                        break
-//                    }
-//
-//                    is ConnectRequest -> {
-//                        clients.remove(connection.uuid)
-//                        send(new<ConnectResponsePacket> {
-//                            this.valid = true
-//                        }, connection)
-//                        connection.uuid = packet.uuid
-//                        this@Server.connected(connection)
-//                        clients[connection.uuid] = this
-//                    }
-//
-//                    else -> {
-//                        worker.queue(packet, connection.uuid)
-//                    }
-//                }
-            }
-            terminate()
-        }
 
         /**
          * This should start the server or connect to the server depending on the implementation.
@@ -240,20 +174,9 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
             running.set(true)
         }
 
-        /**
-         * This should stop the server or disconnect from the server depending on the implementation.
-         */
         override fun terminate() {
-            try {
-//                if (connection.socket?.isInputShutdown == false) connection.socket.shutdownInput()
-//                if (connection.socket?.isOutputShutdown == false) connection.socket.shutdownOutput()
-//                if (connection.socket?.isClosed == false) connection.socket.close()
-//                clientExecutors.remove(this)
-                running.set(false)
-                logger.info { "Terminated worker for ${connection.uuid}" }
-            } catch (e: Exception) {
-                logger.error(e) { "Failed to terminate worker for ${connection.uuid}" }
-            }
+            running.set(false)
+            logger.info { "ClientWorker terminated" }
         }
 
 
@@ -262,13 +185,8 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
          */
         override fun send(packet: Packet, id: Connection?) {
             try {
-
-//                if (!connection.isAlive) throw SocketException("Connection is not alive")
                 val target = id?.uuid?.let { targetOf(it) } ?: AllPlayersTarget
-//                val output = connection.socket.getOutputStream() ?: throw Exception("Socket is null")
-//                packet.write(output)
                 MinecraftNetworkAdapter.sendPacket(packet, target)
-//                logger.info { "Sent server packet of type ${packet::class.simpleName} with id ${packet.id}" }
             } catch (ex: SocketException) {
                 logger.warn { "$connection is not alive" }
                 this@Server.disconnected(connection)
@@ -281,28 +199,6 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
         override fun sendToAll(packet: Packet, vararg exclude: UUID) = this@Server.sendToAll(packet, *exclude)
 
 
-        /**
-         * Receives a packet from the specified connection.
-         *
-         * @param id The connection from which to receive the packet. Default value is null.
-         * @return The received packet, or null if no packet is received.
-         */
-        override fun receive(id: Connection?): Packet? {
-            try {
-
-//                if (!connection.isAlive) return null
-//                val input = connection.socket?.getInputStream()
-//                val packet = input?.readPacket() ?: return null
-//                logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
-//                return packet
-                return null
-            } catch (ex: SocketException) {
-                logger.warn { "$connection is not alive" }
-                running.set(false)
-                return null
-            }
-
-        }
         /**
          * Retrieves the Connection associated with the specified connection ID.
          *
@@ -322,20 +218,18 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
             running.set(false)
             this@Server.disconnected(id)
         }
-//        /**
-//         * Compares this object with the specified object for order. Returns zero if this object is equal
-//         * to the specified [other] object, a negative number if it's less than [other], or a positive number
-//         * if it's greater than [other].
-//         */
-//        override fun compareTo(other: ClientWorker): Int {
-//            return connection.uuid.compareTo(other.connection.uuid)
-//        }
+
     }
 
     companion object {
 
-        operator fun invoke(): Server {
-            return Endpoint.serverRef.get() as Server
+        internal inline operator fun <reified Result : Any?> invoke(noinline optBlk: (Server.() -> Result)? = null): Server {
+            val server = if (serverRef.get() == null) {
+                //Create the server, which initializes the serverRef to this server instance
+                Server()
+            } else serverRef.get() as Server
+            if (optBlk != null) server.optBlk()
+            return server
         }
     }
 }

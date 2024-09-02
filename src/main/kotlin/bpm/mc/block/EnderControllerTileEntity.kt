@@ -14,6 +14,9 @@ import net.neoforged.neoforge.attachment.AttachmentHolder
 import net.neoforged.neoforge.attachment.AttachmentType
 import net.neoforged.neoforge.attachment.IAttachmentHolder
 import net.neoforged.neoforge.attachment.IAttachmentSerializer
+import noderspace.client.runtime.ClientRuntime
+import noderspace.common.workspace.Workspace
+import noderspace.server.environment.ServerRuntime
 import java.util.*
 import java.util.function.Supplier
 
@@ -23,11 +26,6 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
     val attachmentHolder = AttachmentHolder.AsField(this)
 
-
-    override fun onLoad() {
-        super.onLoad()
-
-    }
 
     override fun saveAdditional(tag: CompoundTag, provider: HolderLookup.Provider) {
         super.saveAdditional(tag, provider)
@@ -62,6 +60,18 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
 
     fun getUUID(): UUID = getData(UUID_ATTACHMENT)
+    //The variable to store the workspace
+    private var cachedWorkspace: Workspace? = null
+    //Gets the workspace from the runtime
+    val workspace: Workspace?
+        get() {
+            if (cachedWorkspace != null) return cachedWorkspace
+            val uuid = getUUID()
+            cachedWorkspace = if (level?.isClientSide == true) ClientRuntime[uuid]
+            else ServerRuntime[uuid]
+            return cachedWorkspace
+        }
+
 
     fun setUUID(newUUID: UUID) {
         setData(UUID_ATTACHMENT, newUUID)

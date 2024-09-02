@@ -6,8 +6,7 @@ import imgui.internal.ImRect
 import noderspace.common.logging.KotlinLogging
 import noderspace.client.font.Fonts
 import noderspace.client.runtime.Platform
-import noderspace.client.runtime.Runtime
-import noderspace.client.runtime.windows.CanvasContext
+import noderspace.client.runtime.ClientRuntime
 import noderspace.client.utils.TextInputState
 import noderspace.client.utils.handleUniversalTextInput
 import noderspace.common.utils.FontAwesome
@@ -26,7 +25,6 @@ import noderspace.common.workspace.graph.Link
 import noderspace.common.workspace.graph.Node
 import noderspace.common.workspace.packets.LinkDeleteRequest
 import noderspace.common.workspace.packets.NodeDeleteRequest
-import noderspace.common.workspace.packets.NodeCreateRequest
 import org.joml.Vector2f
 import java.util.*
 import kotlin.math.max
@@ -66,7 +64,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
     private var cursorPosition = 0
     private var selectionStart = 0
     private var selectionEnd = 0
-    private val keyLastPressTime = mutableMapOf<Runtime.Key, Long>()
+    private val keyLastPressTime = mutableMapOf<ClientRuntime.Key, Long>()
     private val inputDelay = 250L
     private val expandedFolders = mutableSetOf<String>()
 
@@ -259,9 +257,9 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         //colects all the links that are connected to the node
         val links = workspace.graph.getLinks(nodeId)
         for (link in links) {
-            Client().send(LinkDeleteRequest(link.uid))
+            Client { send(LinkDeleteRequest(link.uid)) }
         }
-        Client().send(NodeDeleteRequest(nodeId))
+        Client { send(NodeDeleteRequest(nodeId)) }
     }
 
     private fun deleteSelectedNodes() {
@@ -738,7 +736,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
     private fun handleKeyPresses() {
         val currentTime = System.currentTimeMillis()
 
-        for (key in Runtime.Key.values()) {
+        for (key in ClientRuntime.Key.values()) {
             if (Platform.isKeyDown(key)) {
                 val lastPressTime = keyLastPressTime.getOrDefault(key, 0L)
                 if (currentTime - lastPressTime > inputDelay) {
@@ -751,19 +749,19 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         }
     }
 
-    private fun handleKeyInput(key: Runtime.Key) {
+    private fun handleKeyInput(key: ClientRuntime.Key) {
         when (key) {
-            Runtime.Key.BACKSPACE -> handleBackspace()
-            Runtime.Key.DELETE -> handleDelete()
-            Runtime.Key.LEFT -> handleLeftArrow()
-            Runtime.Key.RIGHT -> handleRightArrow()
-            Runtime.Key.ENTER -> createSelectedNode()
-            Runtime.Key.SPACE -> insertCharacter(' ')
+            ClientRuntime.Key.BACKSPACE -> handleBackspace()
+            ClientRuntime.Key.DELETE -> handleDelete()
+            ClientRuntime.Key.LEFT -> handleLeftArrow()
+            ClientRuntime.Key.RIGHT -> handleRightArrow()
+            ClientRuntime.Key.ENTER -> createSelectedNode()
+            ClientRuntime.Key.SPACE -> insertCharacter(' ')
             else -> handleCharacterInput(key)
         }
     }
 
-    private fun handleCharacterInput(key: Runtime.Key) {
+    private fun handleCharacterInput(key: ClientRuntime.Key) {
         val char = key.toString().singleOrNull()
         if (char != null && (char.isLetterOrDigit() || char.isWhitespace())) {
             insertCharacter(char)
@@ -801,7 +799,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
 
     private fun handleLeftArrow() {
         if (cursorPosition > 0) cursorPosition--
-        if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+        if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
             selectionStart = cursorPosition
             selectionEnd = cursorPosition
         }
@@ -809,7 +807,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
 
     private fun handleRightArrow() {
         if (cursorPosition < searchText.length) cursorPosition++
-        if (!Platform.isKeyDown(Runtime.Key.LEFT_SHIFT)) {
+        if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT)) {
             selectionStart = cursorPosition
             selectionEnd = cursorPosition
         }
@@ -886,7 +884,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
     private fun handleKeyboardNavigation() {
         val currentTime = System.currentTimeMillis()
 
-        fun handleNavigationKey(key: Runtime.Key, action: () -> Unit) {
+        fun handleNavigationKey(key: ClientRuntime.Key, action: () -> Unit) {
             if (Platform.isKeyDown(key)) {
                 val lastPressTime = keyLastPressTime.getOrDefault(key, 0L)
                 if (currentTime - lastPressTime > inputDelay) {
@@ -896,7 +894,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
             }
         }
 
-        handleNavigationKey(Runtime.Key.TAB) {
+        handleNavigationKey(ClientRuntime.Key.TAB) {
             val nodeTypes = nodeLibrary.map { it.nodeTypeName }
             val currentIndex = nodeTypes.indexOf(hoveredNodeType)
             hoveredNodeType = if (currentIndex == -1) {
@@ -906,7 +904,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
             }
         }
 
-        handleNavigationKey(Runtime.Key.UP) {
+        handleNavigationKey(ClientRuntime.Key.UP) {
             val nodeTypes = nodeLibrary.map { it.nodeTypeName }
             val currentIndex = nodeTypes.indexOf(hoveredNodeType)
             hoveredNodeType = if (currentIndex == -1) {
@@ -916,7 +914,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
             }
         }
 
-        handleNavigationKey(Runtime.Key.DOWN) {
+        handleNavigationKey(ClientRuntime.Key.DOWN) {
             val nodeTypes = nodeLibrary.map { it.nodeTypeName }
             val currentIndex = nodeTypes.indexOf(hoveredNodeType)
             hoveredNodeType = if (currentIndex == -1) {
@@ -926,11 +924,11 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
             }
         }
 
-        handleNavigationKey(Runtime.Key.ENTER) {
+        handleNavigationKey(ClientRuntime.Key.ENTER) {
             createSelectedNode()
         }
 
-        handleNavigationKey(Runtime.Key.ESCAPE) {
+        handleNavigationKey(ClientRuntime.Key.ESCAPE) {
             close()
         }
     }

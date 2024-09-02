@@ -1,6 +1,8 @@
 package noderspace.common.network
 
 import noderspace.common.logging.KotlinLogging
+import noderspace.common.network.Endpoint.Companion.clientRef
+import noderspace.common.network.Endpoint.Companion.serverRef
 import noderspace.common.network.Endpoint.Side
 import noderspace.common.packets.Packet
 import java.util.UUID
@@ -15,7 +17,7 @@ interface Listener {
      *
      * This variable provides access to the worker object obtained from an endpoint.
      */
-    val worker: Worker get() = Endpoint.serverRef.get().worker
+    val worker: Worker get() = serverRef.get().worker
 
     /**
      * Fetches the client from the endpoint reference.
@@ -25,7 +27,7 @@ interface Listener {
      */
     val client: Client
         get() {
-            val endpoint = Endpoint.clientRef.get()
+            val endpoint = clientRef.get()
             if (endpoint !is Client) throw IllegalStateException("Endpoint is not a client")
             return endpoint
         }
@@ -38,7 +40,7 @@ interface Listener {
      */
     val server: Server
         get() {
-            val endpoint = Endpoint.serverRef.get()
+            val endpoint = serverRef.get()
             if (endpoint !is Server) throw IllegalStateException("Endpoint is not a server")
             return endpoint
         }

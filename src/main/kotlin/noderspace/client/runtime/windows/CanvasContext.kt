@@ -3,19 +3,15 @@ package noderspace.client.runtime.windows
 import imgui.ImColor
 import imgui.ImDrawList
 import imgui.ImGui
-import imgui.ImVec2
 import imgui.flag.*
 import noderspace.common.logging.KotlinLogging
 import noderspace.client.font.Fonts
 import noderspace.client.runtime.Platform
-import noderspace.client.runtime.Runtime
-import noderspace.client.utils.textSize
-import noderspace.client.utils.toVec2f
+import noderspace.client.runtime.ClientRuntime
 import noderspace.client.utils.use
 import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
-import noderspace.common.network.listener
 import noderspace.common.packets.Packet
 import noderspace.common.packets.internal.Time
 import noderspace.common.property.Property
@@ -39,7 +35,7 @@ import kotlin.math.max
 
 class CanvasContext : Listener {
 
-    private val runtime: Runtime get() = Endpoint.installed()
+    private val runtime: ClientRuntime get() = Endpoint.installed()
     private val dragOffset: Vector2f = Vector2f()
     private val nodeMovePacket = NodeMoved()
     private var lastSent: Time = Time.now
@@ -400,7 +396,7 @@ class CanvasContext : Listener {
         if (node.dragged) {
             val mx = mousePos.x / runtime.workspace!!.settings.zoom
             val my = mousePos.y / runtime.workspace!!.settings.zoom
-            val isShiftDown = Platform.isKeyDown(Runtime.Key.LEFT_SHIFT) || Platform.isKeyDown(Runtime.Key.RIGHT_SHIFT)
+            val isShiftDown = Platform.isKeyDown(ClientRuntime.Key.LEFT_SHIFT) || Platform.isKeyDown(ClientRuntime.Key.RIGHT_SHIFT)
 
             if (isDraggingGroup) {
                 // Move all selected nodes
@@ -551,7 +547,7 @@ class CanvasContext : Listener {
         val isLeftClickPressed = ImGui.isMouseClicked(ImGuiMouseButton.Left)
         val isLeftClickReleased = ImGui.isMouseReleased(ImGuiMouseButton.Left)
         val isLeftClickDragging = ImGui.isMouseDragging(ImGuiMouseButton.Left)
-        val isCtrlPressed = Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)
+        val isCtrlPressed = Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL)
 
         if (isLeftClickPressed && !isDraggingNode) {
             val clickedOnNode = workspace.graph.nodes.any { node ->
@@ -617,7 +613,7 @@ class CanvasContext : Listener {
             maxOf(selectionStart!!.x, selectionEnd!!.x), maxOf(selectionStart!!.y, selectionEnd!!.y)
         )
 
-        if (!Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)) {
+        if (!Platform.isKeyDown(ClientRuntime.Key.LEFT_CONTROL)) {
             clearSelection()
         }
 

@@ -13,18 +13,16 @@ import net.neoforged.api.distmarker.OnlyIn
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
-import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RenderGuiEvent
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
-import noderspace.client.runtime.Runtime
-import noderspace.common.managers.Heartbearts
+import noderspace.client.runtime.ClientRuntime
 import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Server
-import noderspace.server.environment.Environment
+import noderspace.server.environment.ServerRuntime
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -40,13 +38,6 @@ object Bpm {
 
     const val ID = "bpm"
     val LOGGER: Logger = LogManager.getLogger(ID)
-
-    val playerUid by lazy { (Minecraft.getInstance().player?.uuid ?: UUID.randomUUID())!! }
-
-    val runtime: Runtime by lazy {
-        Runtime(playerUid)
-    }
-
 
     init {
 
@@ -72,7 +63,7 @@ object Bpm {
 
     private fun onRegisterPayloads(event: RegisterPayloadHandlersEvent) {
         runForDist(clientTarget = {
-            runtime.client.registerSerializers()
+            ClientRuntime.client.registerSerializers()
         }, { })
         MinecraftNetworkAdapter.registerPayloads(event)
     }
@@ -87,7 +78,7 @@ object Bpm {
             CompletableFuture.runAsync({
             }, pBackgroundExecutor).thenCompose { pPreparationBarrier.wait(null) }.thenAcceptAsync({
                 LOGGER.log(Level.INFO, "Initializing EditorContext...")
-                runtime.start(Minecraft.getInstance().window.window)
+                ClientRuntime.start(Minecraft.getInstance().window.window)
             }, pGameExecutor)
         }
     }
@@ -95,9 +86,9 @@ object Bpm {
     @OnlyIn(Dist.CLIENT)
     private fun renderOverlay2D(event: RenderGuiEvent.Pre) {
         if (Overlay2D.skipped) return
-        runtime.newFrame()
+        ClientRuntime.newFrame()
         Overlay2D.render()
-        runtime.endFrame()
+        ClientRuntime.endFrame()
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -119,7 +110,7 @@ object Bpm {
         //TODO: if already loaded, don't reload
         // This runs on the game thread
         //The local players uuiid
-        runtime.connect("localhost", 33456)
+        ClientRuntime.connect()
     }
 
     //Cutout rendering
@@ -127,22 +118,21 @@ object Bpm {
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogout(event: ClientPlayerNetworkEvent.LoggingOut) {
 //        LOGGER.log(Level.INFO, "Client player logging out: ${event.player?.name}")
-        runtime.disconnect()
+        ClientRuntime.disconnect()
     }
 
 
-    //On connect to server, start the runtime.
+    //On connect to server, start the ClientRuntime.
 
     private fun onServerSetup(event: FMLCommonSetupEvent) {
         LOGGER.log(Level.INFO, "Server starting...")
         //TODO: get the minecraft assets  path and load schemas through resources
-        val server = Server(33456)
-//            .install<Heartbearts>()
-            .install<Environment>()
-            .install<Schemas>(
+        Server {
+            install<ServerRuntime>()
+            install<Schemas>(
                 Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas"),
                 Endpoint.Side.SERVER
             )
-        server.start()
+        }.start()
     }
 }
