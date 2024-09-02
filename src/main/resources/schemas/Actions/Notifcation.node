@@ -25,7 +25,7 @@ edges:
 
 source: |
   ${SETUP.{
-      variables._Notify = java.import('noderspace.server.environment.Notify')
+      variables.__Notify__ = java.import('noderspace.server.environment.Notify')
   }}
-  variables._Notify:info(value)
+  variables.__Notify__:info(value)
   ${EXEC.exec_out}

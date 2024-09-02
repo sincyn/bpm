@@ -70,8 +70,8 @@ object ClientRuntime : Listener {
 
     operator fun get(workspaceUid: UUID): Workspace? {
 
-        val cahced =  cachedWorkspaces[workspaceUid]
-        if(cahced != null){
+        val cahced = cachedWorkspaces[workspaceUid]
+        if (cahced != null) {
             return cahced
         }
         //We request the workspace from the server
@@ -327,8 +327,7 @@ object ClientRuntime : Listener {
                 24..84,
                 listOf(FontType.Regular),
                 Pair(FontAwesome.IconMin, FontAwesome.IconMax),
-                "C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\fonts\\Fa-Regular.ttf",
-                true
+                merge = true
             )
             Fonts.registerFonts()
         } catch (e: Exception) {

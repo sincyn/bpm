@@ -22,12 +22,12 @@ object Fonts {
         sizes: IntRange = 8..16,
         types: List<FontType> = FontType.entries,
         glyphRange: Pair<Short, Short>? = null,
-        fontPath: String = "C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\fonts\\$name-%t.ttf",
+        fontPath: String = "/fonts/$name-%t.ttf",
         merge: Boolean = false
     ) {
         val unloadedFontFamily = UnloadedFontFamily(name,
             sizes,
-            types.associateWith { FontDataLoader.loadFromFile(fontPath.replace("%t", it.name), glyphRange, merge) })
+            types.associateWith { FontDataLoader.loadFromResources(fontPath.replace("%t", it.name), glyphRange, merge) })
 //            types.associateWith { FontDataLoader.loadFromResources(fontPath.replace("%t", it.name), glyphRange, merge) })
         unloadedFontFamilies[name] = unloadedFontFamily
         logger.info { "Registered font family: $name, $sizes, $types" }

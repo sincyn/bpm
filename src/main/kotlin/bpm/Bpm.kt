@@ -13,6 +13,7 @@ import net.neoforged.api.distmarker.OnlyIn
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
+import net.neoforged.fml.loading.FMLPaths
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RenderGuiEvent
@@ -127,10 +128,19 @@ object Bpm {
     private fun onServerSetup(event: FMLCommonSetupEvent) {
         LOGGER.log(Level.INFO, "Server starting...")
         //TODO: get the minecraft assets  path and load schemas through resources
+        //Get the run config folder for client and server
+        // Get the Minecraft game directory
+        val gameDir = FMLPaths.GAMEDIR.get()
+        val schemaPath = gameDir.resolve("schemas")
+        if (!schemaPath.toFile().exists()) {
+            schemaPath.toFile().mkdir()
+        }
+
+
         Server {
             install<ServerRuntime>()
             install<Schemas>(
-                Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas"),
+                schemaPath,
                 Endpoint.Side.SERVER
             )
         }.start()

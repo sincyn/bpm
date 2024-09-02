@@ -152,23 +152,14 @@ dependencies {
     libraries('com.charleskorn.kaml:kaml-jvm:0.55.0')
     jarJar('com.charleskorn.kaml:kaml-jvm:0.55.0')
     libraries('com.google.code.gson:gson:2.10.1')
-//    jarJar('com.google.code.gson:gson:2.10.1')
     libraries('io.github.classgraph:classgraph:4.8.165')
     jarJar('io.github.classgraph:classgraph:4.8.165')
-//    libraries(files('libs/luajava-4.0.3-SNAPSHOT.jar'))
-//    jarJar(files('libs/luajava-4.0.3-SNAPSHOT.jar')
-//    )
     jarJar("org.snakeyaml:snakeyaml-engine:2.7")
 
     libraries('party.iroiro.luajava:luajit:4.0.3-SNAPSHOT')
     jarJar('party.iroiro.luajava:luajit:4.0.3-SNAPSHOT')
     libraries('party.iroiro.luajava:luajava:4.0.2')
     jarJar('party.iroiro.luajava:luajava:4.0.2')
-//    libraries('party.iroiro.luajava:luajit:4.0.2')
-//    libraries('party.iroiro.luajava:luajit:4.0.2')
-//    jarJar('party.iroiro.luajava:luajit:4.0.2')
-//    jarJar 'party.iroiro.luajava:luajit-platform:4.0.2:natives-desktop'
-//    libraries 'party.iroiro.luajava:luajit-platform:4.0.2:natives-desktop'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
