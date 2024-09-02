@@ -224,14 +224,14 @@ object ServerRuntime : Listener {
             val workspace = workspaces[users[from]?.workspaceUid ?: error("User not in workspace")]
                 ?: error("Workspace not found")
             workspace.updateVariable(packet.variableName, packet.property["value"])
-//            sendToUsersInWorkspace(workspace.uid, new<VariableUpdated> {
-//                this.variableName = packet.variableName
-//                this.property = packet.property
-//            })
-            server.sendToAll(new<VariableUpdated> {
+            sendToUsersInWorkspace(workspace.uid, new<VariableUpdated> {
                 this.variableName = packet.variableName
                 this.property = packet.property
-            }, from)
+            })
+//            server.sendToAll(new<VariableUpdated> {
+//                this.variableName = packet.variableName
+//                this.property = packet.property
+//            }, from)
         }
 
         is VariableNodeCreateRequest -> {
@@ -504,7 +504,7 @@ object ServerRuntime : Listener {
         val workspaces = new<WorkspaceLibrary> {
             this.workspaces.putAll(valuedWorkspaces)
         }
-        worker.endpoint.send(workspaces, sendTo)
+        server.send(workspaces, sendTo)
         logger.debug { "Sent workspaces to: $sendTo, ${workspaces.workspaces}" }
     }
 

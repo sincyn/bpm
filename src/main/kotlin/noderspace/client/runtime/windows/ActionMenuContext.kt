@@ -257,9 +257,9 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         //colects all the links that are connected to the node
         val links = workspace.graph.getLinks(nodeId)
         for (link in links) {
-            Client { send(LinkDeleteRequest(link.uid)) }
+            Client { it.send(LinkDeleteRequest(link.uid)) }
         }
-        Client { send(NodeDeleteRequest(nodeId)) }
+        Client { it.send(NodeDeleteRequest(nodeId)) }
     }
 
     private fun deleteSelectedNodes() {

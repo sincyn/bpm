@@ -8,17 +8,12 @@ import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Network.new
 import noderspace.common.packets.*
 import noderspace.common.packets.internal.*
-import java.net.SocketException
 import java.util.*
 
-class Client() : Endpoint<Client>() {
+object Client : Endpoint<Client>() {
 
     // Gets the current player's UUID
     private val uuid by lazy { Minecraft.getInstance().player?.uuid ?: error("Player UUID not available") }
-
-    init {
-        clientRef.set(this)
-    }
 
 
     private val logger = KotlinLogging.logger {}
@@ -130,20 +125,18 @@ class Client() : Endpoint<Client>() {
      * Sends a packet to the server.
      */
     override fun send(packet: Packet, id: Connection?) {
-        try {
-            MinecraftNetworkAdapter.sendPacket(packet, ServerTarget)
-            logger.info { "Sent packet of type ${packet::class.simpleName} with id ${packet.id}" }
-        } catch (ex: SocketException) {
-            runningRef.set(false)
-            logger.warn { "Socket exception: ${ex.message}" }
-            connected = false
-        }
+        MinecraftNetworkAdapter.sendPacket(packet, ServerTarget)
+        logger.info { "Sent packet of type ${packet::class.simpleName} with id ${packet.id}" }
     }
     /**
      * Sends the given packet to all connected endpoints.
      */
     override fun sendToAll(packet: Packet, vararg exclude: UUID) = send(packet)
 
+    inline operator fun invoke(block: (Client) -> Unit): Client {
+        block(this)
+        return this
+    }
 
     /**
      * Retrieves the current connection.
@@ -152,16 +145,5 @@ class Client() : Endpoint<Client>() {
         return null
     }
 
-    companion object {
-
-        internal inline operator fun <reified Result : Any?> invoke(noinline optBlk: (Client.() -> Result)? = null): Client {
-            val client = if (clientRef.get() == null) {
-                //Create the server, which initializes the serverRef to this server instance
-                Client()
-            } else clientRef.get() as Client
-            if (optBlk != null) client.optBlk()
-            return client
-        }
-    }
 }
 

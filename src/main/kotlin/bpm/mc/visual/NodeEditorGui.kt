@@ -20,8 +20,8 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
         super.init()
         openTime = System.currentTimeMillis()
         Client {
-            send(NodeLibraryRequest())
-            send(WorkspaceSelected(workspaceUuid))
+            it.send(NodeLibraryRequest())
+            it.send(WorkspaceSelected(workspaceUuid))
         }
         Overlay2D.skipped = true
         ClientRuntime.openCanvas()
@@ -42,7 +42,7 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
         //Fix for nodes not being removed when closing the gui
         ClientRuntime.closeCanvas()
         Overlay2D.skipped = false
-        Client { send(WorkspaceCompileRequest(workspaceUuid)) }
+        Client { it.send(WorkspaceCompileRequest(workspaceUuid)) }
     }
 
     override fun isPauseScreen(): Boolean = false

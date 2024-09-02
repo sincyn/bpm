@@ -1,8 +1,6 @@
 package noderspace.common.network
 
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.network.Endpoint.Companion.clientRef
-import noderspace.common.network.Endpoint.Companion.serverRef
 import noderspace.common.network.Endpoint.Side
 import noderspace.common.packets.Packet
 import java.util.UUID
@@ -12,62 +10,8 @@ import java.util.UUID
  */
 interface Listener {
 
-    /**
-     * Represents a worker object.
-     *
-     * This variable provides access to the worker object obtained from an endpoint.
-     */
-    val worker: Worker get() = serverRef.get().worker
-
-    /**
-     * Fetches the client from the endpoint reference.
-     *
-     * @return The client fetched from the endpoint reference.
-     * @throws IllegalStateException if the endpoint is not a client.
-     */
-    val client: Client
-        get() {
-            val endpoint = clientRef.get()
-            if (endpoint !is Client) throw IllegalStateException("Endpoint is not a client")
-            return endpoint
-        }
-
-    /**
-     * Returns the server instance.
-     *
-     * @throws IllegalStateException if the endpoint is not a server.
-     * @return the server instance.
-     */
-    val server: Server
-        get() {
-            val endpoint = serverRef.get()
-            if (endpoint !is Server) throw IllegalStateException("Endpoint is not a server")
-            return endpoint
-        }
-
-    /**
-     * Represents the connection type, either server or client.
-     *
-     * The `side` variable returns the current connection side based on the endpoint type.
-     * If the endpoint is a `Client`, the `side` will be `NetSide.CLIENT`.
-     * If the endpoint is a `Server`, the `side` will be `NetSide.SERVER`.
-     *
-     * @throws IllegalStateException if the endpoint is neither a `Client` nor a `Server`.
-     *
-     * @see Side
-     * @see Client
-     * @see Server
-     */
-//    val side: Side
-//        get() {
-//            val endpoint = Endpoint.serverRef.get()
-//            return when (endpoint) {
-//                is Client -> Side.CLIENT
-//                is Server -> Side.SERVER
-//                else -> throw IllegalStateException("Endpoint is not a client or server")
-//            }
-//        }
-
+    val server: Server get() = Server
+    val client: Client get() = Client
 
     /**
      * Called when the listener is installed and the endpoint is started.

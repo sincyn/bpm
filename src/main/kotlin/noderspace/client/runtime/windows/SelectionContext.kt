@@ -87,7 +87,7 @@ class SelectionContextOverlay(private val workspace: Workspace) {
         ImGui.pushStyleColor(ImGuiCol.Button, deleteButtonColor)
         if (ImGui.button("Delete All Selected Nodes", -1f, 0f)) {
             selectedNodes.forEach { nodeId ->
-                Client { send(NodeDeleteRequest(nodeId)) }
+                Client { it.send(NodeDeleteRequest(nodeId)) }
             }
         }
         ImGui.popStyleColor()
@@ -104,7 +104,7 @@ class SelectionContextOverlay(private val workspace: Workspace) {
         }
         ImGui.pushStyleColor(ImGuiCol.Button, deleteButtonColor)
         if (ImGui.button("Delete Node", -1f, 0f)) {
-            Client { send(NodeDeleteRequest(node.uid)) }
+            Client { it.send(NodeDeleteRequest(node.uid)) }
         }
         ImGui.popStyleColor()
 

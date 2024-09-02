@@ -360,10 +360,12 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
             )
 
             if (updated) {
-                Client{}.send(VariableUpdateRequest(name, Property.Object().apply {
-                    this["type"] = Property.String(variable::class.simpleName!!)
-                    this["value"] = variable
-                }))
+                Client {
+                    it.send(VariableUpdateRequest(name, Property.Object().apply {
+                        this["type"] = Property.String(variable::class.simpleName!!)
+                        this["value"] = variable
+                    }))
+                }
             }
         }
     }
@@ -449,7 +451,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
                 },
                 WheelAction("Delete", FontAwesome.Trash) {
 //                    workspace.removeVariable(name)
-                    Client{}.send(VariableDeleteRequest(name))
+                    Client { it.send(VariableDeleteRequest(name)) }
                 }
             ),
             isTopLevel = true,
@@ -645,12 +647,14 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
             "Color" -> Property.Vec4i(Vector4i(255, 255, 255, 255))
             else -> return
         }
-        Client{}.send(VariableCreateRequest(name,
-            Property.Object().apply {
-                this["type"] = Property.String(type)
-                this["value"] = property
-            }
-        ))
+        Client {
+            it.send(VariableCreateRequest(name,
+                Property.Object().apply {
+                    this["type"] = Property.String(type)
+                    this["value"] = property
+                }
+            ))
+        }
     }
 
     private fun getColorForType(variable: Property<*>): Int {

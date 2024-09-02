@@ -20,7 +20,9 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 import noderspace.client.runtime.ClientRuntime
+import noderspace.client.runtime.windows.CanvasContext
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Server
 import noderspace.server.environment.ServerRuntime
@@ -69,18 +71,14 @@ object Bpm {
         MinecraftNetworkAdapter.registerPayloads(event)
     }
 
-    private fun onClientSetup(event: FMLClientSetupEvent) {
-        LOGGER.log(Level.INFO, "Client starting...")
-    }
-
 
     private fun onRegisterClientReloadListeners(event: RegisterClientReloadListenersEvent) {
         event.registerReloadListener { pPreparationBarrier, _, _, _, pBackgroundExecutor, pGameExecutor ->
-            CompletableFuture.runAsync({
-            }, pBackgroundExecutor).thenCompose { pPreparationBarrier.wait(null) }.thenAcceptAsync({
-                LOGGER.log(Level.INFO, "Initializing EditorContext...")
-                ClientRuntime.start(Minecraft.getInstance().window.window)
-            }, pGameExecutor)
+            CompletableFuture.runAsync({}, pBackgroundExecutor).thenCompose { pPreparationBarrier.wait(null) }
+                .thenAcceptAsync({
+                    LOGGER.log(Level.INFO, "Initializing EditorContext...")
+                    ClientRuntime.start(Minecraft.getInstance().window.window)
+                }, pGameExecutor)
         }
     }
 
@@ -94,21 +92,19 @@ object Bpm {
 
     @OnlyIn(Dist.CLIENT)
     private fun renderOverlay3D(event: RenderLevelStageEvent) =
-        if (event.stage == RenderLevelStageEvent.Stage.AFTER_LEVEL)
-            Overlay3D.render(
-                event.levelRenderer,
-                event.poseStack,
-                event.projectionMatrix,
-                event.modelViewMatrix,
-                event.camera,
-                event.frustum
-            )
+        if (event.stage == RenderLevelStageEvent.Stage.AFTER_LEVEL) Overlay3D.render(
+            event.levelRenderer,
+            event.poseStack,
+            event.projectionMatrix,
+            event.modelViewMatrix,
+            event.camera,
+            event.frustum
+        )
         else Unit
 
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogin(event: ClientPlayerNetworkEvent.LoggingIn) {
         LOGGER.log(Level.INFO, "Client player logging in: ${event.player?.name}")
-        //TODO: if already loaded, don't reload
         // This runs on the game thread
         //The local players uuiid
         ClientRuntime.connect()
@@ -123,26 +119,30 @@ object Bpm {
     }
 
 
-    //On connect to server, start the ClientRuntime.
-
-    private fun onServerSetup(event: FMLCommonSetupEvent) {
-        LOGGER.log(Level.INFO, "Server starting...")
-        //TODO: get the minecraft assets  path and load schemas through resources
-        //Get the run config folder for client and server
-        // Get the Minecraft game directory
+    private fun onClientSetup(event: FMLClientSetupEvent) {
+        LOGGER.log(Level.INFO, "Server client...")
         val gameDir = FMLPaths.GAMEDIR.get()
         val schemaPath = gameDir.resolve("schemas")
         if (!schemaPath.toFile().exists()) {
             schemaPath.toFile().mkdir()
         }
 
+        Client
+            .install(ClientRuntime).install<Schemas>(schemaPath, Endpoint.Side.CLIENT).install<CanvasContext>()
+            .install<Overlay2D>()
+    }
 
-        Server {
-            install<ServerRuntime>()
-            install<Schemas>(
-                schemaPath,
-                Endpoint.Side.SERVER
-            )
-        }.start()
+    //We want to start the server on both client and server dist because it
+    //still needs to run for single player
+    private fun onServerSetup(event: FMLCommonSetupEvent) {
+        LOGGER.log(Level.INFO, "Server starting...")
+        val gameDir = FMLPaths.GAMEDIR.get()
+        val schemaPath = gameDir.resolve("schemas")
+        if (!schemaPath.toFile().exists()) {
+            schemaPath.toFile().mkdir()
+        }
+        Server.install<ServerRuntime>().install<Schemas>(
+            schemaPath, Endpoint.Side.SERVER
+        ).start()
     }
 }

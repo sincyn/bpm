@@ -6,7 +6,6 @@ import noderspace.common.serial.Serial
 import noderspace.common.utils.className
 import noderspace.common.utils.instantiate
 import noderspace.common.utils.instantiateWith
-import java.net.Socket
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -146,7 +145,6 @@ abstract class Endpoint<T : Endpoint<T>> {
         if (!runningRef.get()) return
         runningRef.set(false)
         logger.info { "Endpoint has been unregistered, waiting one second for graceful shutdown..." }
-        serverRef.set(null)
         terminate()
         teardownListeners()
         logger.info { "Endpoint has been stopped" }
@@ -374,10 +372,12 @@ abstract class Endpoint<T : Endpoint<T>> {
 
     companion object {
 
-        internal val serverRef: AtomicReference<Endpoint<*>> = AtomicReference(null)
-        internal val clientRef: AtomicReference<Endpoint<*>> = AtomicReference(null)
 
         private val logger = KotlinLogging.logger { }
+
+        val client: Client get() = Client
+
+        val server: Server get() = Server
 
         /**
          * Invokes the `invoke` method on the instance.
@@ -386,8 +386,8 @@ abstract class Endpoint<T : Endpoint<T>> {
          */
 
         fun get(side: Side): Endpoint<*> = when (side) {
-            Side.SERVER -> serverRef.get()
-            Side.CLIENT -> clientRef.get()
+            Side.SERVER -> server
+            Side.CLIENT -> client
         }
 
         /**
@@ -399,22 +399,6 @@ abstract class Endpoint<T : Endpoint<T>> {
         inline fun <reified L : Listener> installed(side: Side = Side.CLIENT) = get(side).installed<L>()
 
 
-        /**
-         * Returns the type of the system.
-         *
-         * The type is determined based on whether the system is running on a server or a client.
-         * If the system is running on a server, the type will be Type.SERVER.
-         * If the system is running on a client, the type will be Type.CLIENT.
-         *
-         * @return the type of the system
-         */
-        val side: Side
-            get() = when {
-                serverRef.get() != null -> Side.SERVER
-                clientRef.get() != null -> Side.CLIENT
-                else -> throw IllegalStateException("Endpoint is not a client or server")
-            }
-
     }
 
     /**
@@ -423,34 +407,11 @@ abstract class Endpoint<T : Endpoint<T>> {
      * @property uuid The UUID associated with the ID.
      * @property side The Type associated with the ID.
      */
-    data class Connection(var uuid: UUID, val side: Side, val socket: Socket? = null) {
+    data class Connection(var uuid: UUID, val side: Side) {
 
-        /**
-         * The address variable is a string representation of the host address associated with the given socket.
-         *
-         * @return The host address as a string.
-         */
-        val host: String get() = socket?.inetAddress?.hostAddress ?: "localhost"
-
-        /**
-         * The port variable is an integer representation of the port number associated with the given socket.
-         *
-         * @return The port number as an integer.
-         */
-        val port: Int get() = socket?.port ?: 0
-
-        /**
-         * Indicates whether the socket is alive or not.
-         *
-         * The `isAlive` property returns `true` if the socket is connected and not closed,
-         * and `false` otherwise.
-         *
-         * @return `true` if the socket is alive, `false` otherwise.
-         */
-        val isAlive: Boolean get() = socket?.isConnected == true && !socket.isClosed && !socket.isInputShutdown && !socket.isOutputShutdown && socket.isBound
 
         override fun toString(): String {
-            return "Connection(${uuid}, ${host}, ${port})"
+            return "Connection(${uuid.toString()}, ${side.name})"
         }
     }
 

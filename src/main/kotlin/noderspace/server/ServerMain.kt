@@ -2,7 +2,6 @@ package noderspace.server
 
 import noderspace.common.logging.KotlinLogging
 import noderspace.server.environment.ServerRuntime
-import noderspace.common.managers.Heartbearts
 import noderspace.common.network.Server
 import noderspace.common.managers.Schemas
 import java.nio.file.Path
@@ -16,8 +15,7 @@ fun main(args: Array<String>) {
     } else {
         Path.of("src/main/resources/assets/schemas")
     }
-    val server = Server()
-        .install<Heartbearts>()
+    val server = Server
         .install<ServerRuntime>()
 //        .install<Schemas>(Path.of("C:\\Users\\jraynor\\IdeaProjects\\bp\\graph-common\\src\\main\\resources\\assets\\schemas"))
         .install<Schemas>(schemasPath)

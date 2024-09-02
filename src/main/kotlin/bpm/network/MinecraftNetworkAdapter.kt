@@ -105,12 +105,13 @@ object MinecraftNetworkAdapter {
             when (context.flow()) {
                 PacketFlow.CLIENTBOUND -> {
                     val endpoint = Endpoint.get(Endpoint.Side.CLIENT)
-                    endpoint.worker.queue(payload.packet, NetUtils.DefaultUUID)
+                    endpoint.worker.queue(payload.packet, context.player().uuid)
+
                 }
 
                 PacketFlow.SERVERBOUND -> {
                     val endpoint = Endpoint.get(Endpoint.Side.SERVER)
-                    endpoint.worker.queue(payload.packet, context.player().uuid)
+                    endpoint.worker.queue(payload.packet, NetUtils.DefaultUUID)
                 }
             }
 

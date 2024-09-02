@@ -64,9 +64,6 @@ object ClientRuntime : Listener {
     private val started = AtomicBoolean(false)
     private var canvasWindow: CanvasWindow? = null
     private val logger = KotlinLogging.logger { }
-    override val client = Client {
-        createClient(this)
-    }
 
     operator fun get(workspaceUid: UUID): Workspace? {
 

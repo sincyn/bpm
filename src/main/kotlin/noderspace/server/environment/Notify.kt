@@ -9,7 +9,7 @@ object Notify {
 
     @JvmStatic
     fun info(msg: String) {
-        Server().sendToAll(
+        Server.sendToAll(
             new<NotifyMessage> {
                 icon = 0x0021
                 message = msg

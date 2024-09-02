@@ -843,7 +843,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime)
                         val newValue = buffer.get()
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.String(newValue)
-                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
+                            Client { it.send(EdgePropertyUpdate(edge.uid, this)) }
                         }
                     }
                     ImGui.popItemWidth()
@@ -859,7 +859,9 @@ class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime)
                     if (ImGui.dragFloat("##value", buffer, 0.1f, min, max)) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Float(buffer[0])
-                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
+                            Client {
+                                it.send(EdgePropertyUpdate(edge.uid, this))
+                            }
                         }
                     }
                     ImGui.popItemWidth()
@@ -875,7 +877,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime)
                     if (ImGui.dragInt("##value", buffer, 0.1f, min.toFloat(), max.toFloat())) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Int(buffer[0])
-                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
+                            Client { it.send(EdgePropertyUpdate(edge.uid, this)) }
                         }
                     }
                     ImGui.popItemWidth()
@@ -894,7 +896,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime)
                     ) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = boolValue
-                            Client {}.send(EdgePropertyUpdate(edge.uid, this))
+                            Client { it.send(EdgePropertyUpdate(edge.uid, this)) }
                         }
                     }
                 }
