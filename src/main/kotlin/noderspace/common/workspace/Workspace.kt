@@ -275,10 +275,6 @@ data class Workspace(
          * @return the loaded workspace or null if the workspace doesn't exist or is not a file
          */
         fun load(workspaceName: String): Workspace? {
-            if (Endpoint.isClient()) {
-                //TODO: this may need to not be checked if we're running in a shared client-server context
-                throw IllegalAccessException("Attempted to load workspace from client environment!")
-            }
             val workspaceFile = childPath("workspaces", "$workspaceName.ws", createDirs = false).toFile()
             if (!workspaceFile.exists() || !workspaceFile.isFile) {
                 logger.warn { "Attempted to load null workspace with name '$workspaceFile'" }

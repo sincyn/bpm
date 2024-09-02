@@ -1,4 +1,4 @@
-description: "A reference to a variable. This action retrieves the value of a variable."
+description: "Sets the value of a variable."
 group: Variables
 name: Set Variable
 extends: Base/Node
@@ -31,7 +31,5 @@ edges:
     type: exec
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(name)
-    variables[name] = value
-    ${EXEC.exec_out}
-  end
+  variables[name] = value
+  ${EXEC.exec_out}

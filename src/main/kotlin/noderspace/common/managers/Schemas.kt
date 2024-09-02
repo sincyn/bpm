@@ -11,7 +11,7 @@ import noderspace.common.workspace.packets.NodeLibraryResponse
 import java.nio.file.Path
 import java.util.*
 
-class Schemas(private val path: Path) : Listener {
+class Schemas(private val path: Path, private val side: Endpoint.Side) : Listener {
 
     val library: NodeLibrary = NodeLibrary()
     private val logger = KotlinLogging.logger { }

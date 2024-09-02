@@ -1,8 +1,11 @@
 package bpm.mc.block
 
-import bpm.mc.gui.NodeEditorGui
+import bpm.mc.visual.NodeEditorGui
 import bpm.pipe.PipeNetworkManager
+import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
+import net.minecraft.core.component.DataComponents.CUSTOM_NAME
+import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.ItemInteractionResult
 import net.minecraft.world.entity.item.ItemEntity
@@ -20,7 +23,6 @@ import net.minecraft.world.phys.shapes.BooleanOp
 import net.minecraft.world.phys.shapes.CollisionContext
 import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
-import org.apache.commons.compress.compressors.lz77support.LZ77Compressor
 
 
 class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), EntityBlock {
@@ -47,19 +49,13 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
 
 
     override fun getCollisionShape(
-        p_60572_: BlockState,
-        p_60573_: BlockGetter,
-        p_60574_: BlockPos,
-        p_60575_: CollisionContext
+        p_60572_: BlockState, p_60573_: BlockGetter, p_60574_: BlockPos, p_60575_: CollisionContext
     ): VoxelShape {
         return shape
     }
 
     override fun getShape(
-        p_60555_: BlockState,
-        p_60556_: BlockGetter,
-        p_60557_: BlockPos,
-        p_60558_: CollisionContext
+        p_60555_: BlockState, p_60556_: BlockGetter, p_60557_: BlockPos, p_60558_: CollisionContext
     ): VoxelShape {
         return shape
     }
@@ -67,15 +63,19 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
         val level = context.level
         val pos = context.clickedPos
-        if (!level.isClientSide && PipeNetworkManager.hasControllerInNetwork(level, pos)) {
-            return null // Prevent placement if there's already a controller in the network
-        }
+
         return super.getStateForPlacement(context)
     }
 
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
-        super.onPlace(state, level, pos, oldState, isMoving)
+        //Calls the BLock super onplace, not the BasePipeBlock
         if (!level.isClientSide) {
+            if (PipeNetworkManager.hasControllerInNetwork(level, pos)) {
+                dropController(level, pos)
+                level.removeBlock(pos, false)
+                return
+            }
+
             PipeNetworkManager.onPipeAdded(this, level, pos)
             // Force an update of the network to ensure it recognizes the new controller
             PipeNetworkManager.updateNetwork(level, pos)
@@ -84,12 +84,7 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
 
 
     override fun neighborChanged(
-        state: BlockState,
-        level: Level,
-        pos: BlockPos,
-        block: Block,
-        fromPos: BlockPos,
-        isMoving: Boolean
+        state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
     ) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving)
         if (!level.isClientSide) {
@@ -101,17 +96,32 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         return false
     }
 
-    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
+
+    private fun dropController(level: Level, pos: BlockPos) {
         val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
-        if (blockEntity != null && !level.isClientSide && !player.isCreative) {
+        if (blockEntity != null && !level.isClientSide) {
             val stack = ItemStack(this)
             val serverLevel = level as net.minecraft.server.level.ServerLevel
             val registryAccess = serverLevel.registryAccess()
+            stack.set(
+                CUSTOM_NAME,
+                Component.literal("Ender Controller").withStyle(ChatFormatting.DARK_PURPLE)
+                    .withStyle(ChatFormatting.BOLD)
+            )
             blockEntity.saveToItem(stack, registryAccess)
             ItemEntity(level, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, stack).apply {
                 setDefaultPickUpDelay()
                 level.addFreshEntity(this)
             }
+        }
+    }
+
+    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
+        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+        val block = state.block
+        if (blockEntity != null && !level.isClientSide && block is EnderControllerBlock) {
+            PipeNetworkManager.onPipeRemoved(block, level, pos)
+            dropController(level, pos)
         }
         return super.playerWillDestroy(level, pos, state, player)
     }
@@ -152,16 +162,14 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
+            shape, Shapes.box(
                 0.42156250000000006,
                 0.42156250000000006,
                 -0.00006250000000007638,
                 0.5784375000000002,
                 0.5787500000000001,
                 0.015625
-            ),
-            BooleanOp.OR
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
             shape,
@@ -209,46 +217,27 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.46875, 0.471875, 0.996875, 0.5, 0.5093749999999999, 1.0046875),
-            BooleanOp.OR
+            shape, Shapes.box(0.46875, 0.471875, 0.996875, 0.5, 0.5093749999999999, 1.0046875), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.5, 0.471875, 0.99625, 0.53125, 0.5093749999999999, 1.0040624999999999),
-            BooleanOp.OR
+            shape, Shapes.box(0.5, 0.471875, 0.99625, 0.53125, 0.5093749999999999, 1.0040624999999999), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.46875, 0.503125, 0.9975, 0.5, 0.5406249999999999, 1.0053125),
-            BooleanOp.OR
+            shape, Shapes.box(0.46875, 0.503125, 0.9975, 0.5, 0.5406249999999999, 1.0053125), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.5, 0.503125, 0.998125, 0.53125, 0.5406249999999999, 1.0059375),
-            BooleanOp.OR
+            shape, Shapes.box(0.5, 0.503125, 0.998125, 0.53125, 0.5406249999999999, 1.0059375), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.46875, 0.48125, 1.0015625, 0.5, 0.5187499999999999, 1.0021874999999998),
-            BooleanOp.OR
+            shape, Shapes.box(0.46875, 0.48125, 1.0015625, 0.5, 0.5187499999999999, 1.0021874999999998), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(0.5, 0.48125, 1.0015625, 0.53125, 0.5187499999999999, 1.0021874999999998),
-            BooleanOp.OR
+            shape, Shapes.box(0.5, 0.48125, 1.0015625, 0.53125, 0.5187499999999999, 1.0021874999999998), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.4212499999999999,
-                0.4215625,
-                -0.00006250000000007638,
-                0.5784374999999999,
-                0.5784375000000002,
-                0.015625
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.4212499999999999, 0.4215625, -0.00006250000000007638, 0.5784374999999999, 0.5784375000000002, 0.015625
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
             shape,
@@ -256,52 +245,29 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
+            shape, Shapes.box(
                 0.43781249999999994,
                 0.4371875,
                 -0.006250000000000089,
                 0.45343749999999994,
                 0.5621875000000001,
                 0.0031250000000000444
-            ),
-            BooleanOp.OR
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.45343749999999994,
-                0.4375,
-                -0.006250000000000089,
-                0.5471874999999999,
-                0.453125,
-                0.0031250000000000444
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.45343749999999994, 0.4375, -0.006250000000000089, 0.5471874999999999, 0.453125, 0.0031250000000000444
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.45343749999999994,
-                0.546875,
-                -0.006250000000000089,
-                0.5471874999999999,
-                0.5625,
-                0.0031250000000000444
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.45343749999999994, 0.546875, -0.006250000000000089, 0.5471874999999999, 0.5625, 0.0031250000000000444
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.484375,
-                0.49687500000000007,
-                0.029000000000000137,
-                0.515625,
-                0.5343749999999999,
-                0.029625000000000012
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.484375, 0.49687500000000007, 0.029000000000000137, 0.515625, 0.5343749999999999, 0.029625000000000012
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
             shape,
@@ -339,52 +305,34 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
+            shape, Shapes.box(
                 0.43781249999999994,
                 0.4371875,
                 -0.0031250000000000444,
                 0.45343749999999994,
                 0.5621875000000001,
                 0.006249999999999978
-            ),
-            BooleanOp.OR
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.45343749999999994,
-                0.4375,
-                -0.0031250000000000444,
-                0.5471874999999999,
-                0.453125,
-                0.006249999999999978
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.45343749999999994, 0.4375, -0.0031250000000000444, 0.5471874999999999, 0.453125, 0.006249999999999978
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
-                0.45343749999999994,
-                0.546875,
-                -0.0031250000000000444,
-                0.5471874999999999,
-                0.5625,
-                0.006249999999999978
-            ),
-            BooleanOp.OR
+            shape, Shapes.box(
+                0.45343749999999994, 0.546875, -0.0031250000000000444, 0.5471874999999999, 0.5625, 0.006249999999999978
+            ), BooleanOp.OR
         )
         shape = Shapes.join(
-            shape,
-            Shapes.box(
+            shape, Shapes.box(
                 0.42156250000000006,
                 0.42156250000000006,
                 -0.00006250000000007638,
                 0.5784375000000002,
                 0.5787500000000001,
                 0.015625
-            ),
-            BooleanOp.OR
+            ), BooleanOp.OR
         )
 
         return shape

@@ -1,4 +1,4 @@
-package bpm.mc.gui
+package bpm.mc.visual
 
 import bpm.Bpm
 import bpm.Bpm.runtime
@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.workspace.packets.NodeLibraryRequest
 import noderspace.common.workspace.packets.WorkspaceCompileRequest
@@ -28,10 +29,10 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
 //        runtime.setDisplaySize(window.guiScaledWidth.toFloat(), window.guiScaledHeight.toFloat())
         openTime = System.currentTimeMillis()
 //
-        Endpoint.get().send(NodeLibraryRequest())
+        Client().send(NodeLibraryRequest())
         println("WorkspaceSelected $workspaceUuid")
-        Endpoint.get().send(WorkspaceSelected(workspaceUuid))
-        Overlay.skipped = true
+        Client().send(WorkspaceSelected(workspaceUuid))
+        Overlay2D.skipped = true
         runtime.openCanvas()
     }
 
@@ -95,9 +96,8 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
         super.onClose()
         //Fix for nodes not being removed when closing the gui
         runtime.closeCanvas()
-        Overlay.skipped = false
-        Endpoint.get().send(WorkspaceCompileRequest(workspaceUuid))
-
+        Overlay2D.skipped = false
+        Client().send(WorkspaceCompileRequest(workspaceUuid))
     }
 
     override fun isPauseScreen(): Boolean = false

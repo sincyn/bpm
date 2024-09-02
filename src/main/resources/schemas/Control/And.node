@@ -1,13 +1,13 @@
-# Loop.node
+# ASnd.node
 description: "A for loop that executes a body of code while a condition is true"
-group: Flow
-name: For
+group: Control
+name: And
 extends: Base/Node
 
 theme:
-  color: '#f4d93d'
+  color: '#ac3e3d'
   height: 80
-  width: 140
+  width: 100
   icon: 0x21bb
 
 edges:

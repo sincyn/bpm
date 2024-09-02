@@ -13,6 +13,7 @@ import noderspace.client.utils.handleUniversalTextInput
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.use
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
 import noderspace.common.property.Property
@@ -56,7 +57,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
     private val accentColor = ImColor.rgba(100, 65, 165, 255)
     private val hoverColor = ImColor.rgba(70, 70, 70, 255)
     private val folderColor = ImColor.rgba(60, 60, 60, 255)
-    private val nodeLibrary: NodeLibrary get() = listener<Schemas>().library
+    private val nodeLibrary: NodeLibrary get() = listener<Schemas>(Endpoint.Side.CLIENT).library
     private val bodyFont get() = Fonts.getFamily("Inter")["Regular"][14]
     private val iconFont get() = Fonts.getFamily("Fa")["Bold"][18]
 
@@ -258,9 +259,9 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
         //colects all the links that are connected to the node
         val links = workspace.graph.getLinks(nodeId)
         for (link in links) {
-            Endpoint.get().send(LinkDeleteRequest(link.uid))
+            Client().send(LinkDeleteRequest(link.uid))
         }
-        Endpoint.get().send(NodeDeleteRequest(nodeId))
+        Client().send(NodeDeleteRequest(nodeId))
     }
 
     private fun deleteSelectedNodes() {

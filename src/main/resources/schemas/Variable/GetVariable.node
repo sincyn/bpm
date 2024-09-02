@@ -1,4 +1,4 @@
-description: "A reference to a variable. This action retrieves the value of a variable."
+description: "Gets the value of a variable."
 group: Variables
 name: Get Variable
 extends: Base/Node
@@ -23,6 +23,4 @@ edges:
     type: any
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(name)
-    return variables[name]
-  end
+  return variables[name]

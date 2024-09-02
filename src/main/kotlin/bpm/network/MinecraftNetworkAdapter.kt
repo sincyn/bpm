@@ -101,14 +101,16 @@ object MinecraftNetworkAdapter {
 
         @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
         override fun handle(payload: MinecraftPacketPayload<T>, context: IPayloadContext) {
-            val endpoint = Endpoint.get()
+
             when (context.flow()) {
                 PacketFlow.CLIENTBOUND -> {
-                    endpoint.worker.queue(payload.packet, context.player().uuid)
+                    val endpoint = Endpoint.get(Endpoint.Side.CLIENT)
+                    endpoint.worker.queue(payload.packet, NetUtils.DefaultUUID)
                 }
 
                 PacketFlow.SERVERBOUND -> {
-                    endpoint.worker.queue(payload.packet, NetUtils.DefaultUUID)
+                    val endpoint = Endpoint.get(Endpoint.Side.SERVER)
+                    endpoint.worker.queue(payload.packet, context.player().uuid)
                 }
             }
 

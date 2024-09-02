@@ -1,4 +1,4 @@
-package bpm.mc.gui
+package bpm.mc.visual
 
 import imgui.ImGui
 import imgui.flag.ImGuiWindowFlags
@@ -8,7 +8,7 @@ import noderspace.common.packets.Packet
 import noderspace.common.workspace.packets.NotifyMessage
 import java.util.*
 
-object Overlay : Listener {
+object Overlay2D : Listener {
 
     var skipped = false
     private val notificationManager: NotificationManager = NotificationManager()

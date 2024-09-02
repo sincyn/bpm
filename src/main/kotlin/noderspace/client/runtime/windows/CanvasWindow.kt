@@ -9,7 +9,10 @@ import noderspace.client.runtime.Runtime
 import noderspace.client.utils.toVec2f
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.use
+import noderspace.common.managers.Schemas
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
+import noderspace.common.network.listener
 import noderspace.common.property.Property
 import noderspace.common.property.cast
 import noderspace.common.property.castOr
@@ -132,7 +135,14 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
             runtime.reloadNodeLibrary()
         }
 
-        renderButton(bounds.z - 50f, bounds.y + 100f, FontAwesome.AlignCenter, fontSize = 25f, width = 30f, height = 30f) {
+        renderButton(
+            bounds.z - 50f,
+            bounds.y + 100f,
+            FontAwesome.AlignCenter,
+            fontSize = 25f,
+            width = 30f,
+            height = 30f
+        ) {
             canvasCtx.center()
         }
 
@@ -150,7 +160,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
     }
     //True for the first 1.5 seconds the canvas is open
 
-    private val initialOpen get() = System.currentTimeMillis() - openTime < 250
+    private val initialOpen get() = System.currentTimeMillis() - openTime < 100
     private var openTime = System.currentTimeMillis()
 
     fun close() {
@@ -245,8 +255,36 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
 
             canvasCtx.handleNode(node, nodeBounds, headerBounds)
         }
+
+        renderToolTips()
+
+        if(canvasCtx.isDraggingNode){
+        }
     }
 
+
+    private fun renderToolTips() {
+
+        if (canvasCtx.isDraggingNode) return
+        // Show tooltip for hovered node
+        if (canvasCtx.hoveredTitleBar != null) {
+            val node = workspace.getNode(canvasCtx.hoveredTitleBar!!) ?: return
+            val nodeType = listener<Schemas>(Endpoint.Side.CLIENT).library.get("${node.type}/${node.name}") ?: return
+            val description: Property<String> = nodeType["description"].cast()
+            val color = node.color
+            canvasCtx.tooltip(
+                node.icon.toChar().toString(),
+                description.get()
+            )
+        }
+
+        if (canvasCtx.hoveredPin != null) {
+            val edge = canvasCtx.hoveredPin!!.second
+            val description = edge.description
+            val color = getEdgeColor(edge.type)
+            canvasCtx.tooltip(FontAwesome.Info, description, color)
+        }
+    }
 
     private fun renderNodeBody(drawList: ImDrawList, node: Node, bounds: Vector4f, color: Int) {
         // Adjust bounds to account for edge offset
@@ -805,7 +843,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                         val newValue = buffer.get()
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.String(newValue)
-                            Endpoint.get().send(EdgePropertyUpdate(edge.uid, this))
+                            Client().send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -821,7 +859,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     if (ImGui.dragFloat("##value", buffer, 0.1f, min, max)) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Float(buffer[0])
-                            Endpoint.get().send(EdgePropertyUpdate(edge.uid, this))
+                            Client().send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -837,7 +875,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     if (ImGui.dragInt("##value", buffer, 0.1f, min.toFloat(), max.toFloat())) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = Property.Int(buffer[0])
-                            Endpoint.get().send(EdgePropertyUpdate(edge.uid, this))
+                            Client().send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                     ImGui.popItemWidth()
@@ -856,7 +894,7 @@ class CanvasWindow(var workspace: Workspace, private val runtime: Runtime) : IRe
                     ) {
                         edge.properties["value"] = edge.value.apply {
                             this["default"] = boolValue
-                            Endpoint.get().send(EdgePropertyUpdate(edge.uid, this))
+                            Client().send(EdgePropertyUpdate(edge.uid, this))
                         }
                     }
                 }

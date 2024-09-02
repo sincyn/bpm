@@ -3,6 +3,7 @@ package bpm.mc.block
 import bpm.pipe.PipeNetworkManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.state.BlockState
@@ -42,6 +43,10 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
                 notifyNeighbors(level, pos)
             }
         }
+    }
+
+    override fun getStateForPlacement(p_49820_: BlockPlaceContext): BlockState? {
+        return getUpdatedState(p_49820_.level, p_49820_.clickedPos, defaultBlockState())
     }
 
     open fun canConnectTo(level: Level, pos: BlockPos, direction: Direction): Boolean {
@@ -114,11 +119,11 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     }
 
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
-        super.onRemove(state, level, pos, newState, isMoving)
         if (!level.isClientSide && state.block != newState.block) {
             PipeNetworkManager.onPipeRemoved(this, level, pos)
             // Force an update of the network to ensure it recognizes the removed controller
             PipeNetworkManager.updateNetwork(level, pos)
         }
+        super.onRemove(state, level, pos, newState, isMoving)
     }
 }

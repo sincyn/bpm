@@ -4,7 +4,6 @@ import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Endpoint.Side
 import noderspace.common.packets.Packet
 import java.util.UUID
-import kotlin.reflect.KClass
 
 /**
  * An interface for listening to network events.
@@ -16,7 +15,7 @@ interface Listener {
      *
      * This variable provides access to the worker object obtained from an endpoint.
      */
-    val worker: Worker get() = Endpoint.ref.get().worker
+    val worker: Worker get() = Endpoint.serverRef.get().worker
 
     /**
      * Fetches the client from the endpoint reference.
@@ -26,7 +25,7 @@ interface Listener {
      */
     val client: Client
         get() {
-            val endpoint = Endpoint.ref.get()
+            val endpoint = Endpoint.clientRef.get()
             if (endpoint !is Client) throw IllegalStateException("Endpoint is not a client")
             return endpoint
         }
@@ -39,7 +38,7 @@ interface Listener {
      */
     val server: Server
         get() {
-            val endpoint = Endpoint.ref.get()
+            val endpoint = Endpoint.serverRef.get()
             if (endpoint !is Server) throw IllegalStateException("Endpoint is not a server")
             return endpoint
         }
@@ -57,15 +56,15 @@ interface Listener {
      * @see Client
      * @see Server
      */
-    val side: Side
-        get() {
-            val endpoint = Endpoint.ref.get()
-            return when (endpoint) {
-                is Client -> Side.CLIENT
-                is Server -> Side.SERVER
-                else -> throw IllegalStateException("Endpoint is not a client or server")
-            }
-        }
+//    val side: Side
+//        get() {
+//            val endpoint = Endpoint.serverRef.get()
+//            return when (endpoint) {
+//                is Client -> Side.CLIENT
+//                is Server -> Side.SERVER
+//                else -> throw IllegalStateException("Endpoint is not a client or server")
+//            }
+//        }
 
 
     /**
@@ -114,4 +113,4 @@ interface Listener {
     }
 }
 
-inline fun <reified T : Listener> listener(): T = Endpoint.get().installed<T>()
+inline fun <reified T : Listener> listener(side: Side): T = Endpoint.get(side).installed<T>()

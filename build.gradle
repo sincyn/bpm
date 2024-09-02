@@ -124,11 +124,15 @@ dependencies {
 
     // Must use the '-neoforge' version on NeoForge. If on regular forge, omit the '-neoforge'
     libraries('org.jetbrains.kotlin:kotlin-stdlib:2.0.10')
+    jarJar('org.jetbrains.kotlin:kotlin-stdlib:2.0.10')
     libraries('org.jetbrains.kotlin:kotlin-reflect:2.0.10')
+    jarJar('org.jetbrains.kotlin:kotlin-reflect:2.0.10')
     libraries('org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1')
+    jarJar('org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1')
     libraries('org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.2')
+    jarJar('org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.2')
     libraries('org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2')
-
+    jarJar('org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2')
     implementation('thedarkcolour:kotlinforforge-neoforge:5.5.0:slim')
 
     libraries('io.github.spair:imgui-java-binding:1.86.12')
@@ -148,15 +152,16 @@ dependencies {
     libraries('com.charleskorn.kaml:kaml-jvm:0.55.0')
     jarJar('com.charleskorn.kaml:kaml-jvm:0.55.0')
     libraries('com.google.code.gson:gson:2.10.1')
-    jarJar('com.google.code.gson:gson:2.10.1')
+//    jarJar('com.google.code.gson:gson:2.10.1')
     libraries('io.github.classgraph:classgraph:4.8.165')
     jarJar('io.github.classgraph:classgraph:4.8.165')
-    libraries 'org.json:json:20231013'
-    jarJar('org.json:json:20231013')
 //    libraries(files('libs/luajava-4.0.3-SNAPSHOT.jar'))
-//    jarJar(files('libs/luajava-4.0.3-SNAPSHOT.jar'))
-    libraries(files('libs/luajit-4.0.3-SNAPSHOT.jar'))
-    jarJar(files('libs/luajit-4.0.3-SNAPSHOT.jar'))
+//    jarJar(files('libs/luajava-4.0.3-SNAPSHOT.jar')
+//    )
+    jarJar("org.snakeyaml:snakeyaml-engine:2.7")
+
+    libraries('party.iroiro.luajava:luajit:4.0.3-SNAPSHOT')
+    jarJar('party.iroiro.luajava:luajit:4.0.3-SNAPSHOT')
     libraries('party.iroiro.luajava:luajava:4.0.2')
     jarJar('party.iroiro.luajava:luajava:4.0.2')
 //    libraries('party.iroiro.luajava:luajit:4.0.2')

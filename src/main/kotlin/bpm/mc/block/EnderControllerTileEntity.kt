@@ -23,9 +23,6 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
     val attachmentHolder = AttachmentHolder.AsField(this)
 
-    companion object {
-
-    }
 
     override fun onLoad() {
         super.onLoad()
@@ -35,7 +32,6 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
     override fun saveAdditional(tag: CompoundTag, provider: HolderLookup.Provider) {
         super.saveAdditional(tag, provider)
         // Save the UUID directly to the main tag
-        tag.putUUID("UUID", getUUID())
         // Save other attachments
         attachmentHolder.serializeAttachments(provider)?.let {
             tag.put(AttachmentHolder.ATTACHMENTS_NBT_KEY, it)
@@ -45,9 +41,7 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
     override fun loadAdditional(tag: CompoundTag, provider: HolderLookup.Provider) {
         super.loadAdditional(tag, provider)
-        if (tag.hasUUID("UUID")) {
-            setUUID(tag.getUUID("UUID"))
-        }
+
         if (tag.contains(AttachmentHolder.ATTACHMENTS_NBT_KEY)) {
             attachmentHolder.deserializeInternal(provider, tag.getCompound(AttachmentHolder.ATTACHMENTS_NBT_KEY))
         }
@@ -56,7 +50,6 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
     override fun getUpdateTag(provider: HolderLookup.Provider): CompoundTag {
         val tag = super.getUpdateTag(provider)
         // Include UUID in the update tag
-        tag.putUUID("UUID", getUUID())
         attachmentHolder.serializeAttachments(provider)?.let {
             tag.put(AttachmentHolder.ATTACHMENTS_NBT_KEY, it)
         }

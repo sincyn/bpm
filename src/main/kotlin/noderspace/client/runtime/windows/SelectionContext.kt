@@ -6,6 +6,7 @@ import imgui.type.ImFloat
 import imgui.type.ImInt
 import imgui.type.ImString
 import noderspace.client.font.Fonts
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Node
@@ -16,7 +17,7 @@ import java.util.*
 
 class SelectionContextOverlay(private val workspace: Workspace) {
 
-    private val endpoint = Endpoint.get()
+    private val endpoint = Client()
     private var isOpen = false
     private var animationProgress = 0f
     private val animationDuration = 0.3f

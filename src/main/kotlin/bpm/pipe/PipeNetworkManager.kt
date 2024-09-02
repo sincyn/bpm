@@ -2,17 +2,22 @@ package bpm.pipe
 
 import bpm.mc.block.BasePipeBlock
 import bpm.mc.block.EnderControllerBlock
+import bpm.mc.block.EnderControllerTileEntity
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.references.Blocks
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.AirBlock
 import net.minecraft.world.level.block.state.BlockState
+import noderspace.common.logging.KotlinLogging
+import noderspace.server.environment.Environment
 import java.util.concurrent.ConcurrentHashMap
 
 object PipeNetworkManager {
 
     private val networks = mutableListOf<PipeNetwork>()
     private val pipeTypeCache = ConcurrentHashMap<Class<out BasePipeBlock>, MutableSet<BlockPos>>()
-
+    private val logger = KotlinLogging.logger {}
     fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         val connectedNetworks = findConnectedNetworks(level, pos)
         when {
@@ -20,11 +25,41 @@ object PipeNetworkManager {
             connectedNetworks.size == 1 -> connectedNetworks.first().addPipe(pipe, level, pos)
             else -> mergeNetworks(connectedNetworks, pipe, level, pos)
         }
+
+        if (pipe is EnderControllerBlock) {
+            onControllerPlaced(level.getBlockEntity(pos) as EnderControllerTileEntity)
+        }
         addToTypeCache(pipe, pos)
+    }
+
+
+    private fun onControllerRemoved(entity: EnderControllerTileEntity) {
+        val uuid = entity.getUUID()
+        //We should locate the workspace in the environment, and remove any event functions that are associated with the controller
+        Environment.closeWorkspace(uuid)
+    }
+
+
+    private fun onControllerPlaced(entity: EnderControllerTileEntity) {
+        val uuid = entity.getUUID()
+        //We should locate the workspace in the environment, and add any event functions that are associated with the controller
+//        Environment.openWorkspace(uuid)
+        //We should recompile the workspace at this point
+        Environment.recompileWorkspace(uuid)
     }
 
     fun onPipeRemoved(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         val affectedNetworks = findConnectedNetworks(level, pos)
+
+        if (pipe is EnderControllerBlock) {
+            val controllerTileEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+            if (controllerTileEntity != null) {
+                onControllerRemoved(controllerTileEntity)
+            } else {
+                logger.warn("Couldn't remove controller at $pos, no tile entity found")
+            }
+        }
+
 
         affectedNetworks.forEach { network ->
             network.removePipe(level, pos)
@@ -88,16 +123,28 @@ object PipeNetworkManager {
     }
 
     fun updateNetwork(level: Level, pos: BlockPos) {
+        val blockState = level.getBlockState(pos)
+
+        if (blockState.isAir) {
+            // Handle air block case
+            onPipeRemoved(level.getBlockState(pos.below()).block as? BasePipeBlock ?: return, level, pos)
+            return
+        }
+        val block = blockState.block
+        if (block !is BasePipeBlock) {
+            // If the block is neither air nor a BasePipeBlock, we don't need to update the network
+            return
+        }
+
         val affectedNetworks = findConnectedNetworks(level, pos)
 
         if (affectedNetworks.isEmpty()) {
             // If no networks are found, create a new one
-            if (level.getBlockState(pos).block is BasePipeBlock)
-                createNetwork(level.getBlockState(pos).block as BasePipeBlock, level, pos)
+            createNetwork(block, level, pos)
         } else {
             // Merge networks if more than one is found
             if (affectedNetworks.size > 1) {
-                mergeNetworks(affectedNetworks, level.getBlockState(pos).block as BasePipeBlock, level, pos)
+                mergeNetworks(affectedNetworks, block, level, pos)
             }
 
             // Update the single (possibly merged) network
@@ -109,8 +156,10 @@ object PipeNetworkManager {
             if (controllers.size > 1) {
                 // Remove all but the first controller
                 controllers.keys.drop(1).forEach { controllerPos ->
-                    if (level.getBlockState(controllerPos).block is EnderControllerBlock) {
-                        onPipeRemoved(level.getBlockState(controllerPos).block as BasePipeBlock, level, controllerPos)
+                    val controllerState = level.getBlockState(controllerPos)
+                    val controllerBlock = controllerState.block
+                    if (controllerBlock is EnderControllerBlock) {
+                        onPipeRemoved(controllerBlock, level, controllerPos)
                         level.removeBlock(controllerPos, false)
                     }
                 }

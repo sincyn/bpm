@@ -6,8 +6,6 @@ import noderspace.common.network.NetUtils
 import noderspace.common.serial.Serialize
 import org.joml.Vector2f
 import org.joml.Vector4f
-import org.json.JSONObject
-import org.json.JSONTokener
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
@@ -37,26 +35,27 @@ data class User(
     val avatar: ByteArray = getAvatarBytes()
 
     private fun pullUsername(): String {
-        //send Http request to https://api.mojang.com/user/profile/$uuid
-        val connection = URL(
-            "https://api.mojang.com/user/profile/${
-                uid.toString().replace("-", "")
-            }"
-        ).openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-
-        // handle the response
-        return if (connection.responseCode == 200) {
-            val response = connection.inputStream.bufferedReader().use { it.readText() }
-            val jsonObject = JSONTokener(response).nextValue() as JSONObject
-            val name = jsonObject.getString("name")
-            logger.debug { "Successfully pulled username for $uid, [$name]" }
-            name
-        } else {
-//            throw IllegalStateException("Unexpected response code: ${connection.responseCode}")
-            logger.error { "Failed to pull username for $uid, using UUID instead" }
-            uid.toString()
-        }
+//        //send Http request to https://api.mojang.com/user/profile/$uuid
+//        val connection = URL(
+//            "https://api.mojang.com/user/profile/${
+//                uid.toString().replace("-", "")
+//            }"
+//        ).openConnection() as HttpURLConnection
+//        connection.requestMethod = "GET"
+//
+//        // handle the response
+//        return if (connection.responseCode == 200) {
+//            val response = connection.inputStream.bufferedReader().use { it.readText() }
+//            val jsonObject = JSONTokener(response).nextValue() as JSONObject
+//            val name = jsonObject.getString("name")
+//            logger.debug { "Successfully pulled username for $uid, [$name]" }
+//            name
+//        } else {
+////            throw IllegalStateException("Unexpected response code: ${connection.responseCode}")
+//            logger.error { "Failed to pull username for $uid, using UUID instead" }
+//            uid.toString()
+//        }
+        return uid.toString()
     }
 
 

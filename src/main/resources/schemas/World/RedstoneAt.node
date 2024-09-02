@@ -1,6 +1,6 @@
-description: "The redstone value at the given position."
+description: "Get the redstone value at a given location."
 group: Redstone
-name: Redstone At
+name: Get Redstone Value
 extends: Base/Node
 
 theme:
@@ -11,17 +11,17 @@ theme:
 
 
 edges:
-  value:
+  location:
     description: 'The block position'
     direction: input
-    type: any
+    type: vec3i
   result:
     description: 'The redstone value at the given position'
     direction: output
     type: number
 
 source: |
-  local _World = java.import('noderspace.server.environment.World')
-  local function ${NODE.name}_${NODE.uid}(value)
-    return _World:signalAt(value.x, value.y, value.z)
-  end
+  ${SETUP.{
+      variables.__World__ = java.import('noderspace.server.environment.World')
+  }}
+  return variables.__World__:signalAt(value.x, value.y, value.z)

@@ -1,6 +1,7 @@
 package noderspace.common.property
 
 import noderspace.common.logging.KotlinLogging
+import java.util.concurrent.ConcurrentHashMap
 
 private val log = KotlinLogging.logger { }
 
@@ -25,7 +26,7 @@ interface PropertyMap : Property<MutableMap<String, Property<*>>>, Iterable<Pair
      *
      * @return a mutable map containing property names as keys and property objects as values.
      */
-    override fun get(): MutableMap<String, Property<*>>
+    override fun get(): ConcurrentHashMap<String, Property<*>>
 
     /**
      * Checks if the given name is contained in the map.

@@ -66,6 +66,11 @@ fun ImFont.sizeOf(
     return Vector2f(vec.x, vec.y)
 }
 
+fun ImFont.textSize(text: String): ImVec2 = this.use {
+    ImGui.calcTextSize(text)
+}
+
+
 inline fun <T : Any> ImFont.use(block: (ImFont) -> T): T {
     ImGui.pushFont(this)
     val value = block(this)

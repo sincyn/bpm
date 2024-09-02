@@ -56,7 +56,6 @@ object World {
             velZ.toDouble(),
             spread.toDouble()
         )
-        println("Spawned particle $particleName at $x, $y, $z")
     }
 
     private fun getParticleByName(name: String): ParticleOptions {

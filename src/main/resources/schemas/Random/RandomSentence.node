@@ -1,12 +1,12 @@
-# Random.node
-description: "Generates a random number within a specified range"
+# RandomFloat.node
+description: "Generates a random sentence."
 group: Random
-name: Random Word
+name: RNG Sentence
 extends: Base/Node
 
 theme:
   color: '#213752'
-  width: 140
+  width: 120
   height: 40
   icon: 0xe55f
 edges:
@@ -15,7 +15,7 @@ edges:
     direction: output
     type: string
 source: |
-  local _Random = java.import('noderspace.common.utils.Random')
-  local function ${NODE.name}_${NODE.uid}()
-    return _Random:randomSentence()
-  end
+  ${SETUP.{
+      variables.__Random__ = java.import('noderspace.common.utils.Random')
+  }}
+  return variables.__Random__:randomSentence()

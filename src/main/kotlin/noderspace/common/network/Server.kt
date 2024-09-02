@@ -22,7 +22,7 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
 
 
     init {
-        ref.set(this)
+        serverRef.set(this)
     }
 
     // Create our logger
@@ -55,7 +55,7 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
      */
     override fun initiate() {
         try {
-            socket = ServerSocket(port)
+//            socket = ServerSocket(port)
             thread.start()
             worker.start()
             logger.info { "Server started on port $port" }
@@ -71,21 +71,21 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
      * Runs the server and accepts incoming client connections.
      */
     override fun run() {
-        while (runningRef.get()) {
-            try {
-                val client = socket?.accept() ?: continue
-                val connection = Connection(UUID.randomUUID(), Side.CLIENT, client)
-                logger.info { "Starting worker for ${connection.uuid}" }
-                val worker = ClientWorker(connection)
-                worker.initiate()
-                clients[connection.uuid] = worker
-                clientExecutors.execute(worker)
-            } catch (e: SocketException) {
-                runningRef.set(false)
-                logger.error(e) { "Failed to accept client connection" }
-            }
-        }
-        terminate()
+//        while (runningRef.get()) {
+//            try {
+//                val client = socket?.accept() ?: continue
+//                val connection = Connection(UUID.randomUUID(), Side.CLIENT, client)
+//                logger.info { "Starting worker for ${connection.uuid}" }
+//                val worker = ClientWorker(connection)
+//                worker.initiate()
+//                clients[connection.uuid] = worker
+//                clientExecutors.execute(worker)
+//            } catch (e: SocketException) {
+//                runningRef.set(false)
+//                logger.error(e) { "Failed to accept client connection" }
+//            }
+//        }
+//        terminate()
     }
 
 
@@ -95,7 +95,7 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
     override fun terminate() {
         runningRef.set(false)
         clients.forEach { (_, worker) -> worker.terminate() }
-        socket?.close()
+//        socket?.close()
         clientExecutors.shutdown()
         clients.clear()
         //TODO: relay to listeners
@@ -107,10 +107,16 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
      * Called when a client has connected
      */
     override fun connected(id: Connection) {
-        logger.info { "Client ${id.uuid} connected" }
+//        logger.info { "Client ${id.uuid} connected" }
+        clients.remove(id.uuid)
+        send(new<ConnectResponsePacket> {
+            this.valid = true
+        }, id)
+        id.uuid = id.uuid
         listeners.forEach {
             it.onConnect(id.uuid)
         }
+        clients[id.uuid] = ClientWorker(id)
     }
 
 
@@ -201,27 +207,27 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
          */
         override fun run() {
             while (running.get()) {
-                val packet = receive(connection) ?: continue
-                when (packet) {
-                    is DisconnectPacket -> {
-                        disconnected(connection)
-                        break
-                    }
-
-                    is ConnectRequest -> {
-                        clients.remove(connection.uuid)
-                        send(new<ConnectResponsePacket> {
-                            this.valid = true
-                        }, connection)
-                        connection.uuid = packet.uuid
-                        this@Server.connected(connection)
-                        clients[connection.uuid] = this
-                    }
-
-                    else -> {
-                        worker.queue(packet, connection.uuid)
-                    }
-                }
+//                val packet = receive(connection) ?: continue
+//                when (packet) {
+//                    is DisconnectPacket -> {
+//                        disconnected(connection)
+//                        break
+//                    }
+//
+//                    is ConnectRequest -> {
+//                        clients.remove(connection.uuid)
+//                        send(new<ConnectResponsePacket> {
+//                            this.valid = true
+//                        }, connection)
+//                        connection.uuid = packet.uuid
+//                        this@Server.connected(connection)
+//                        clients[connection.uuid] = this
+//                    }
+//
+//                    else -> {
+//                        worker.queue(packet, connection.uuid)
+//                    }
+//                }
             }
             terminate()
         }
@@ -239,9 +245,9 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
          */
         override fun terminate() {
             try {
-                if (connection.socket?.isInputShutdown == false) connection.socket.shutdownInput()
-                if (connection.socket?.isOutputShutdown == false) connection.socket.shutdownOutput()
-                if (connection.socket?.isClosed == false) connection.socket.close()
+//                if (connection.socket?.isInputShutdown == false) connection.socket.shutdownInput()
+//                if (connection.socket?.isOutputShutdown == false) connection.socket.shutdownOutput()
+//                if (connection.socket?.isClosed == false) connection.socket.close()
 //                clientExecutors.remove(this)
                 running.set(false)
                 logger.info { "Terminated worker for ${connection.uuid}" }
@@ -257,12 +263,12 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
         override fun send(packet: Packet, id: Connection?) {
             try {
 
-                if (!connection.isAlive) throw SocketException("Connection is not alive")
+//                if (!connection.isAlive) throw SocketException("Connection is not alive")
                 val target = id?.uuid?.let { targetOf(it) } ?: AllPlayersTarget
 //                val output = connection.socket.getOutputStream() ?: throw Exception("Socket is null")
 //                packet.write(output)
                 MinecraftNetworkAdapter.sendPacket(packet, target)
-                logger.info { "Sent packet of type ${packet::class.simpleName} with id ${packet.id}" }
+//                logger.info { "Sent server packet of type ${packet::class.simpleName} with id ${packet.id}" }
             } catch (ex: SocketException) {
                 logger.warn { "$connection is not alive" }
                 this@Server.disconnected(connection)
@@ -284,11 +290,12 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
         override fun receive(id: Connection?): Packet? {
             try {
 
-                if (!connection.isAlive) return null
-                val input = connection.socket?.getInputStream()
-                val packet = input?.readPacket() ?: return null
-                logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
-                return packet
+//                if (!connection.isAlive) return null
+//                val input = connection.socket?.getInputStream()
+//                val packet = input?.readPacket() ?: return null
+//                logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
+//                return packet
+                return null
             } catch (ex: SocketException) {
                 logger.warn { "$connection is not alive" }
                 running.set(false)
@@ -323,5 +330,12 @@ class Server(private val port: Int) : Endpoint<Server>(), Runnable {
 //        override fun compareTo(other: ClientWorker): Int {
 //            return connection.uuid.compareTo(other.connection.uuid)
 //        }
+    }
+
+    companion object {
+
+        operator fun invoke(): Server {
+            return Endpoint.serverRef.get() as Server
+        }
     }
 }

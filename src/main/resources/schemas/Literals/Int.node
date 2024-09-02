@@ -17,6 +17,4 @@ edges:
     type: number
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(value)
-    return value
-  end
+  return value

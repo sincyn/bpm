@@ -3,6 +3,7 @@ package noderspace.common.property
 import noderspace.common.network.NetUtils
 import org.joml.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 
@@ -19,9 +20,7 @@ import kotlin.reflect.full.starProjectedType
 inline fun <reified T : Property<*>> Property<*>.cast(): T = this as T
 
 
-inline fun <reified T : Property<*>> Property<*>.castOr(crossinline block: () -> T): T = this as? T ?: block()
-
-
+inline infix fun <reified T : Property<*>> Property<*>.castOr(crossinline block: () -> T): T = this as? T ?: block()
 
 
 /**
@@ -399,10 +398,10 @@ interface Property<T : Any> {
      *
      * @property properties A mutable map that holds the properties.
      */
-    open class Object(private val properties: MutableMap<kotlin.String, Property<*>> = mutableMapOf()) :
+    open class Object(private val properties: ConcurrentHashMap<kotlin.String, Property<*>> = ConcurrentHashMap()) :
         PropertyMap {
 
-        override fun get(): MutableMap<kotlin.String, Property<*>> = properties
+        override fun get() = properties
         /**
          * Finds a property by it's qualified name.
          *
@@ -428,13 +427,12 @@ interface Property<T : Any> {
          * @property bytes The number of bytes.
          */
         override val bytes: kotlin.Int = 4 + get().values.sumOf { it.bytes } + get().keys.sumOf { it.length + 4 }
-        override fun copy() = Object(this().mapValues { it.value.copy() }.toMutableMap())
+        override fun copy() = Object(ConcurrentHashMap(this().mapValues { it.value.copy() }))
 
         private fun takeFirstPart(name: kotlin.String): kotlin.String {
             val index = name.indexOf('.')
             return if (index == -1) name else name.substring(0, index)
         }
-
 
 
         override fun equals(other: Any?): kotlin.Boolean {
@@ -525,7 +523,15 @@ interface Property<T : Any> {
                 is kotlin.Char -> Char(value)
                 is java.util.UUID -> UUID(value)
                 is java.lang.Class<*> -> Class(value)
-                is MutableMap<*, *> -> Object(value as MutableMap<kotlin.String, Property<*>>)
+                is Map<*, *> -> {
+                    val map = value as Map<kotlin.String, *>
+                    Object {
+                        map.forEach { (key, value) ->
+                            this[key] = of(value!!)
+                        }
+                    }
+                }
+
                 is MutableList<*> -> List(value as MutableList<Property<*>>)
                 is kotlin.collections.List<*> -> List(value.toMutableList() as MutableList<Property<*>>)
                 else -> ofVector(value)

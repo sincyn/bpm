@@ -9,6 +9,7 @@ import noderspace.common.logging.KotlinLogging
 import noderspace.client.font.Fonts
 import noderspace.client.runtime.Platform
 import noderspace.client.runtime.Runtime
+import noderspace.client.utils.textSize
 import noderspace.client.utils.toVec2f
 import noderspace.client.utils.use
 import noderspace.common.managers.Schemas
@@ -161,16 +162,14 @@ class CanvasContext : Listener {
     }
 
     fun isPointOverEdge(point: Vector2f, edgeBounds: Vector4f): Boolean {
-        return point.x >= edgeBounds.x && point.x <= edgeBounds.z &&
-                point.y >= edgeBounds.y && point.y <= edgeBounds.w
+        return point.x >= edgeBounds.x && point.x <= edgeBounds.z && point.y >= edgeBounds.y && point.y <= edgeBounds.w
     }
 
     fun isPointOverEdge(point: Vector2f, edgePos: Vector2f, isExec: Boolean = false): Boolean {
         if (isExec) {
             val triangleSize = 8f * zoom
             val triangleHitbox = 12f * zoom // Slightly larger than the visual size for easier interaction
-            return point.x >= edgePos.x - triangleHitbox && point.x <= edgePos.x + triangleHitbox &&
-                    point.y >= edgePos.y - triangleHitbox && point.y <= edgePos.y + triangleHitbox
+            return point.x >= edgePos.x - triangleHitbox && point.x <= edgePos.x + triangleHitbox && point.y >= edgePos.y - triangleHitbox && point.y <= edgePos.y + triangleHitbox
         } else {
             val edgeRadius = 4f * zoom
             val dx = point.x - edgePos.x
@@ -615,8 +614,7 @@ class CanvasContext : Listener {
 
         val topLeft = Vector2f(minOf(selectionStart!!.x, selectionEnd!!.x), minOf(selectionStart!!.y, selectionEnd!!.y))
         val bottomRight = Vector2f(
-            maxOf(selectionStart!!.x, selectionEnd!!.x),
-            maxOf(selectionStart!!.y, selectionEnd!!.y)
+            maxOf(selectionStart!!.x, selectionEnd!!.x), maxOf(selectionStart!!.y, selectionEnd!!.y)
         )
 
         if (!Platform.isKeyDown(Runtime.Key.LEFT_CONTROL)) {
@@ -962,6 +960,97 @@ class CanvasContext : Listener {
 
     }
 
+    fun tooltip(
+        icon: String,
+        text: String,
+        iconFontSize: Int = 28,
+        textFontSize: Int = 24,
+        iconColor: Int = ImColor.rgba(33, 150, 243, 255)
+    ) {
+        val drawList = ImGui.getForegroundDrawList()
+        val iconFont = fontawesomeFamily[iconFontSize]
+        val textFont = headerFamily[textFontSize]
+
+        // Draws a custom tool tip with an icon and text.
+        val iconSize = iconFont.calcTextSizeA(iconFontSize.toFloat(), Float.MAX_VALUE, 0f, icon)
+        val textSize = textFont.calcTextSizeA(textFontSize.toFloat(), Float.MAX_VALUE, 0f, text)
+        val padding = 10f
+        val tooltipWidth = iconSize.x + textSize.x + padding * 3
+        val tooltipHeight = max(iconSize.y, textSize.y) + padding * 2
+
+        val tooltipPos = Vector2f(ImGui.getMousePos().x + 16, ImGui.getMousePos().y - tooltipHeight / 2)
+        val tooltipBounds = Vector4f(
+            tooltipPos.x, tooltipPos.y, tooltipPos.x + tooltipWidth, tooltipPos.y + tooltipHeight
+        )
+
+        drawList.addRectFilled(
+            tooltipBounds.x,
+            tooltipBounds.y,
+            tooltipBounds.z,
+            tooltipBounds.w,
+            ImColor.rgba(30, 30, 30, 255),
+            40f,
+        )
+
+        drawList.addRect(
+            tooltipBounds.x,
+            tooltipBounds.y,
+            tooltipBounds.z,
+            tooltipBounds.w,
+            ImColor.rgba(200, 200, 200, 255),
+            40f,
+        )
+        val leftMargin = 3.33f
+        //Draw circle around the icon
+        drawList.addCircleFilled(
+            tooltipBounds.x + padding + iconSize.x / 2 + leftMargin,
+            tooltipBounds.y + padding + iconSize.y / 2,
+            iconSize.x / 2 + padding / 1.75f + 1,
+            iconColor
+        )
+
+        drawList.addText(
+            iconFont,
+            iconFontSize.toFloat() + 8,
+            tooltipBounds.x + padding - 2f + leftMargin,
+            tooltipBounds.y + padding - 8f,
+            ImColor.rgba(255, 255, 255, 255),
+            icon.toString()
+        )
+
+        drawList.addText(
+            textFont,
+            textFontSize.toFloat(),
+            tooltipBounds.x + iconSize.x + padding * 2 + leftMargin,
+            tooltipBounds.y + padding + 2,
+            ImColor.rgba(255, 255, 255, 255),
+            text
+        )
+
+        if (tooltipBounds.x < 0) {
+            tooltipBounds.x = 0f
+            tooltipBounds.z = tooltipWidth
+        }
+
+        if (tooltipBounds.z > ImGui.getMainViewport().size.x) {
+            tooltipBounds.z = ImGui.getMainViewport().size.x
+            tooltipBounds.x = tooltipBounds.z - tooltipWidth
+        }
+
+        if (tooltipBounds.y < 0) {
+            tooltipBounds.y = 0f
+            tooltipBounds.w = tooltipHeight
+        }
+
+        if (tooltipBounds.w > ImGui.getMainViewport().size.y) {
+            tooltipBounds.w = ImGui.getMainViewport().size.y
+            tooltipBounds.y = tooltipBounds.w - tooltipHeight
+        }
+
+
+    }
+
+
     fun start(node: Node, edge: Edge) {
         selectedEdge = Pair(node, edge)
         val edgeBounds = computeEdgeBounds(node, edge)
@@ -975,9 +1064,9 @@ class CanvasContext : Listener {
         if (nodes.isEmpty()) return
 
         val minX = nodes.minOf { it.x }
-        val minY = nodes.minOf { it.y  }
+        val minY = nodes.minOf { it.y }
         val maxX = nodes.maxOf { it.x }
-        val maxY = nodes.maxOf { it.y  }
+        val maxY = nodes.maxOf { it.y }
         val displaySize = ImGui.getMainViewport().size
         val zoom = workspace.settings.zoom
 
@@ -1000,12 +1089,9 @@ class CanvasContext : Listener {
         val offsetY = (displaySize.y - scaledHeight) / 2
 
         // Calculate the new scroll position
-        val newScrollX = -centerX + ((displaySize.x / 2)  * zoom)
-        val newScrollY = -centerY * zoom + ((displaySize.y / 2)  * zoom)
+        val newScrollX = -centerX + ((displaySize.x / 2) * zoom)
+        val newScrollY = -centerY * zoom + ((displaySize.y / 2) * zoom)
         workspace.settings.scrolled.set(newScrollX, newScrollY)
-
-
-
 
 
         // Apply the new scroll position
@@ -1085,7 +1171,7 @@ class CanvasContext : Listener {
         return null
     }
 
-
+    //A poor mans type system xD
     private fun canConnect(sourceEdge: Edge, targetEdge: Edge): Boolean {
         // Prevent connecting an edge to itself
         if (sourceEdge.uid == targetEdge.uid) return false
@@ -1096,13 +1182,26 @@ class CanvasContext : Listener {
         // Prevent connecting edges from the same node
         if (sourceEdge.owner == targetEdge.owner) return false
 
+
+        //If source and edge aren't exec, and the target already has a link, it's invalid
+        if (sourceEdge.type != "exec" && targetEdge.type != "exec" && workspace.graph.getLinks()
+                .any { it.to == targetEdge.uid }
+        ) {
+            return false
+        }
+
         // If either is "any" type and both are not exec, it's valid
         if (sourceEdge.type == "any" && targetEdge.type != "exec" || targetEdge.type == "any" && sourceEdge.type != "exec") {
             return true
         }
+        //Early return if the types are the same
+        if (sourceEdge.type == targetEdge.type) return true
 
-        // Check if the edge types are compatible
-        return sourceEdge.type == targetEdge.type
+        //Splits types by "or" keyword with surrounding space. Checks against all other split types
+        val sourceTypes = sourceEdge.type.split(" or ").map { it.trim() }
+        val targetTypes = targetEdge.type.split(" or ").map { it.trim() }
+        //Returns true if any of the source types are in the target types
+        return sourceTypes.any { it in targetTypes }
     }
 
     private fun createLink(sourceNode: Node, sourceEdge: Edge, targetNode: Node, targetEdge: Edge) {

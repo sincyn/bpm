@@ -2,13 +2,14 @@ package noderspace.server.environment
 
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Network.new
+import noderspace.common.network.Server
 import noderspace.common.workspace.packets.NotifyMessage
 
 object Notify {
 
     @JvmStatic
     fun info(msg: String) {
-        Endpoint.get().sendToAll(
+        Server().sendToAll(
             new<NotifyMessage> {
                 icon = 0x0021
                 message = msg

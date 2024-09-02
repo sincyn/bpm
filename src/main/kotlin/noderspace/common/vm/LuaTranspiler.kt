@@ -1,18 +1,17 @@
-package noderspace.common.codegen
+package noderspace.common.vm
 
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
 import noderspace.common.property.*
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Edge
 import noderspace.common.workspace.graph.Node
-import party.iroiro.luajava.Lua
-import party.iroiro.luajava.value.LuaValue
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-object LuaCodeGenerator {
+object LuaTranspiler {
 
     private val logger = KotlinLogging.logger {}
     private val nodeDependencies = ConcurrentHashMap<UUID, MutableSet<UUID>>()
@@ -121,7 +120,7 @@ object LuaCodeGenerator {
         if (generatedFunctions.contains(node.uid)) return
 
         currentNode = node
-        val nodeTemplate = listener<Schemas>().library["${node.type}/${node.name}"]
+        val nodeTemplate = listener<Schemas>(Endpoint.Side.SERVER).library["${node.type}/${node.name}"]
         if (nodeTemplate == null) {
             logger.error { "Node template not found for ${node.type}/${node.name}" }
             return

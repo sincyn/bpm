@@ -15,6 +15,7 @@ import noderspace.client.font.Fonts
 import noderspace.client.runtime.windows.CanvasContext
 import noderspace.client.utils.*
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Client
 import noderspace.common.utils.FontAwesome
 import noderspace.common.network.Endpoint
 import noderspace.common.workspace.Workspace
@@ -63,7 +64,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
     private var isPopupInteractionStarted = false
 
     // Network client
-    private val client by lazy { Endpoint.get() }
+    private val client by lazy { Client() }
 
     // Variable expansion
     private var expandedVariable: String? = null
@@ -450,7 +451,7 @@ class VariablesMenu(private val workspace: Workspace, private val canvasContext:
                 },
                 WheelAction("Delete", FontAwesome.Trash) {
 //                    workspace.removeVariable(name)
-                    Endpoint.get().send(VariableDeleteRequest(name))
+                    Client().send(VariableDeleteRequest(name))
                 }
             ),
             isTopLevel = true,

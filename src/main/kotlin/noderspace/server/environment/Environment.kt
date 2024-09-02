@@ -2,10 +2,13 @@ package noderspace.server.environment
 
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
 import noderspace.common.network.Network.new
 import noderspace.common.network.listener
 import noderspace.common.packets.Packet
+import noderspace.common.packets.internal.ConnectRequest
+import noderspace.common.packets.internal.DisconnectPacket
 import noderspace.common.property.Property
 import noderspace.common.property.PropertyMap
 import noderspace.common.property.configured
@@ -21,6 +24,7 @@ import noderspace.common.workspace.packets.*
 import org.joml.Vector2f
 import org.joml.Vector4i
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 object Environment : Listener {
 
@@ -33,7 +37,7 @@ object Environment : Listener {
      *
      * @property workspaces A mutable map where `UUID` keys are associated with `Workspace` values.
      */
-    private val workspaces = mutableMapOf<UUID, Workspace>()
+    private val workspaces = ConcurrentHashMap<UUID, Workspace>()
 
     /**
      * Represents the collection of currently opened workspaces.
@@ -108,17 +112,84 @@ object Environment : Listener {
         }
     }
 
+
+    private fun sendError(workspaceUid: UUID, msg: EvalContext.Result) {
+        sendToUsersInWorkspace(workspaceUid, new<NotifyMessage> {
+            icon = 0xf071
+            message = msg.message
+            header = msg::class.simpleName ?: "Error"
+            color = "#f54242"
+            lifetime = 2.5f
+            type = NotifyMessage.NotificationType.ERROR
+        })
+    }
+    /**
+     * Returns true if the function was executed successfully, false otherwise.
+     */
+    fun execute(workspace: Workspace, functionName: String, vararg args: Any?): Boolean {
+        val result = EvalContext.callFunction(workspace, functionName, *args)
+        if (result.isRealFailure) {
+            sendError(workspace.uid, result)
+            return false
+        }
+        return true
+    }
+
     override fun onTick(delta: Float, tick: Int): Unit {
         for (workspace in workspaces.values) {
             if (workspace.needsRecompile) continue
-            val result = EvalContext.callFunction(workspace, "Tick")
-            if (result.isFailure) {
-                logger.error { "Failed to call Tick function: ${result.failure?.error}" }
-                workspace.needsRecompile = true
+            //Calls our redstone event functions
+//            val redstone = EvalContext.callFunction(workspace, "Redstone", null)
+//            if (redstone.hasFailure && !redstone.isNotFound) {
+//                //This is a real error, the function was found and failed to execute
+//                logger.error { "Failed to call Redstone function: ${redstone.message}" }
+//                workspace.needsRecompile = true
+//            } else if (redstone.isNotFound) {
+//                //We don't need to recompile if it's not found, this is normal
+//                workspace.needsRecompile = false
+//            }
+
+            workspace.needsRecompile = !execute(workspace, "Tick")
+            //Recompile only if the redstone function failed to execute
+            if (!workspace.needsRecompile) {
+                workspace.needsRecompile = !execute(workspace, "Redstone")
             }
         }
+//            if (redstone.failure!!.error.contains("Group Redstone not found")) {
+//                workspace.needsRecompile = false
+//                return
+//            } else {
+//                logger.error { "Failed to call Redstone function: ${redstone.failure.error}" }
+//                sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
+//                    icon = 0xf071
+//                    message = redstone.failure.error ?: "Failed to call Run function"
+//                    header = "Error: Failed to call Redstone function"
+//                    color = "#f54242"
+//                    lifetime = 2.5f
+//                    type = NotifyMessage.NotificationType.ERROR
+//                })
+//                workspace.needsRecompile = true
+//            }
 
 
+        // Calls the tick function(s). Can be more than one.
+//            val tick = EvalContext.callFunction(workspace, "Tick")
+//            if (tick.failure!!.error.contains("Group Tick not found")) {
+//                workspace.needsRecompile = false
+//                return
+//            } else {
+//                logger.error { "Failed to call Tick function: ${tick.failure.error}" }
+//                sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
+//                    icon = 0xf071
+//                    message = redstone.failure.error ?: "Failed to call Run function"
+//                    header = "Error: Failed to call Redstone function"
+//                    color = "#f54242"
+//                    lifetime = 2.5f
+//                    type = NotifyMessage.NotificationType.ERROR
+//                })
+//                workspace.needsRecompile = true
+//            }
+//        }
     }
 
     /**
@@ -209,7 +280,7 @@ object Environment : Listener {
             val workspace = workspaces[users[from]?.workspaceUid ?: error("User not in workspace")]
                 ?: error("Workspace not found")
             val type = if (packet.type == noderspace.common.workspace.packets.NodeType.GetVariable) "Variables/Get Variable" else "Variables/Set Variable"
-            val library = listener<Schemas>().library
+            val library = listener<Schemas>(Endpoint.Side.SERVER).library
             val nodeType = library[type] ?: error("Node type not found")
             val edges = nodeType.properties["edges"] as? Property.Object ?: error("Edges not found")
             val input = edges["name"] as? Property.Object ?: error("Input not found")
@@ -221,9 +292,7 @@ object Environment : Listener {
             default.set(packet.variableName)
 
             val node = createFromType(
-                workspace,
-                nodeType,
-                packet.position
+                workspace, nodeType, packet.position
             )
 
             val variableName = packet.variableName
@@ -241,6 +310,15 @@ object Environment : Listener {
             })
 
         }
+
+        is DisconnectPacket -> {
+            server.disconnected(Endpoint.Connection(from, Endpoint.Side.SERVER))
+        }
+
+        is ConnectRequest -> {
+            server.connected(Endpoint.Connection(from, Endpoint.Side.SERVER))
+        }
+
 
         else -> Unit
     }
@@ -268,40 +346,47 @@ object Environment : Listener {
 
 
     private fun compileWorkspace(workspace: Workspace) {
-        try {
-            workspace.save()
-            workspace.needsRecompile = false
-            EvalContext.eval(workspace)
-            val result = EvalContext.callFunction(workspace, "Run")
-            if (result.isFailure) {
-                if (result.failure!!.error.contains("Group Run not found")) {
-                    workspace.needsRecompile = false
-                    return
-                } else {
-                    logger.error { "Failed to call Run function: ${result.failure?.error}" }
-                    sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
-                        icon = 0xf071
-                        message = result.failure?.error ?: "Failed to call Run function"
-                        header = "Error: Failed to call Run function"
-                        color = "#f54242"
-                        lifetime = 2.5f
-                        type = NotifyMessage.NotificationType.ERROR
-                    })
-                    workspace.needsRecompile = true
-                }
-            }
-        } catch (e: Exception) {
-            logger.error { "Failed to compile workspace: ${e.message}" }
-            sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
-                icon = 0xf071
-                message = e.message ?: "Failed to compile workspace"
-                header = "Error: Failed to compile workspace"
-                color = "#f54242"
-                lifetime = 2.5f
-                type = NotifyMessage.NotificationType.ERROR
-            })
+//        try {
+        workspace.save()
+        workspace.needsRecompile = false
+        val evalResult = EvalContext.eval(workspace)
+        if (evalResult.isRealFailure) {
+            sendError(workspace.uid, evalResult)
             workspace.needsRecompile = true
+            logger.error(evalResult.message)
+        } else {
+            workspace.needsRecompile = !execute(workspace, "Run")
         }
+//                val result = EvalContext.callFunction(workspace, "Run")
+//                if (result.isFailure) {
+//                    if (result.failure!!.error.contains("Group Run not found")) {
+//                        workspace.needsRecompile = false
+//                        return
+//                    } else {
+//                        logger.error { "Failed to call Run function: ${result.failure?.error}" }
+//                        sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
+//                            icon = 0xf071
+//                            message = result.failure?.error ?: "Failed to call Run function"
+//                            header = "Error: Failed to call Run function"
+//                            color = "#f54242"
+//                            lifetime = 2.5f
+//                            type = NotifyMessage.NotificationType.ERROR
+//                        })
+//                        workspace.needsRecompile = true
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                logger.error { "Failed to compile workspace: ${e.message}" }
+//                sendToUsersInWorkspace(workspace.uid, new<NotifyMessage> {
+//                    icon = 0xf071
+//                    message = e.message ?: "Failed to compile workspace"
+//                    header = "Error: Failed to compile workspace"
+//                    color = "#f54242"
+//                    lifetime = 2.5f
+//                    type = NotifyMessage.NotificationType.ERROR
+//                })
+//                workspace.needsRecompile = true
+//            }
 
     }
 
@@ -311,7 +396,7 @@ object Environment : Listener {
             return
         }
 
-        val schema = listener<Schemas>().library[nodeType] ?: run {
+        val schema = listener<Schemas>(Endpoint.Side.SERVER).library[nodeType] ?: run {
             logger.warn { "Failed to create node: $nodeType. Unknown type." }
             return
         }
@@ -490,7 +575,25 @@ object Environment : Listener {
         clients.add(sender)
         //send the packet to all clients that have the same workspace opened, except the sender.
         server.sendToAll(nodeMovePacket, *clients.toTypedArray())
-        logger.debug { "Sent node move packet to all clients except sender, $sender" }
+    }
+    //Removes any function callbacks that were registered for the workspace
+    fun closeWorkspace(workspaceUid: UUID) {
+        val workspace = workspaces[workspaceUid] ?: return
+        workspace.save()
+//        workspaces.remove(workspaceUid)
+//        openedWorkspaces.filter { (_, uid) -> uid == workspaceUid }.keys.forEach { openedWorkspaces.remove(it) }
+//        users.filter { (_, user) -> user.workspaceUid == workspaceUid }.keys.forEach { users.remove(it) }
+
+        workspace.needsRecompile = true
+    }
+
+    fun recompileWorkspace(workspaceUi: UUID) {
+        val workspace = workspaces[workspaceUi] ?: return
+        if (workspace.needsRecompile) {
+            compileWorkspace(workspace)
+        } else {
+            logger.warn { "Workspace does not need recompilation" }
+        }
     }
 
 

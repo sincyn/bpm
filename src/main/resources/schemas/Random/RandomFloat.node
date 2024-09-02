@@ -1,12 +1,12 @@
-# Random.node
+# RandomFloat.node
 description: "Generates a random number within a specified range"
 group: Random
-name: Random
+name: RNG Float
 extends: Base/Node
 
 theme:
   color: '#167933'
-  width: 140
+  width: 120
   height: 60
   icon: 0xe55f
 edges:
@@ -16,8 +16,6 @@ edges:
     type: number
     value:
       type: float
-      min: -100
-      max: 100
       default: 0
   max:
     description: 'The maximum value (inclusive)'
@@ -25,8 +23,6 @@ edges:
     type: number
     value:
       type: float
-      min: -100
-      max: 100
       default: 1
   result:
     description: 'The generated random number'
@@ -34,6 +30,8 @@ edges:
     type: number
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(min, max)
-    return min + math.random() * (max - min)
-  end
+  ${SETUP.{
+      -- Initialize the random number generator
+      math.randomseed(os.time())
+  }}
+  return min + math.random() * (max - min)

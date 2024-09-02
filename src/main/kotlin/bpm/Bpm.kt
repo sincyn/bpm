@@ -1,36 +1,29 @@
 package bpm
 
-import bpm.mc.gui.Overlay
-import bpm.mc.gui.Overlay.skipped
+import bpm.mc.visual.Overlay2D
 import bpm.mc.registries.ModAttachments
 import bpm.mc.registries.ModBlocks
 import bpm.mc.registries.ModItems
 import bpm.mc.registries.ModTiles
+import bpm.mc.visual.Overlay3D
 import bpm.network.MinecraftNetworkAdapter
-import bpm.network.PacketTarget
-import imgui.ImGui
-import imgui.flag.ImGuiWindowFlags
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Font
-import net.minecraft.server.packs.resources.PreparableReloadListener
-import net.minecraft.server.packs.resources.ResourceManager
-import net.minecraft.util.profiling.ProfilerFiller
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.api.distmarker.OnlyIn
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.fml.ModLoadingContext
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RenderGuiEvent
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 import noderspace.client.runtime.Runtime
 import noderspace.common.managers.Heartbearts
 import noderspace.common.managers.Schemas
+import noderspace.common.network.Endpoint
 import noderspace.common.network.Server
-import noderspace.common.packets.Packet
 import noderspace.server.environment.Environment
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -41,7 +34,6 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executor
 
 @Mod(Bpm.ID)
 object Bpm {
@@ -68,12 +60,14 @@ object Bpm {
             FORGE_BUS.addListener(Bpm::onClientPlayerLogout)
             MOD_BUS.addListener(Bpm::onClientSetup)
             MOD_BUS.addListener(Bpm::onRegisterClientReloadListeners)
-            FORGE_BUS.addListener(Bpm::renderOverlay)
+            FORGE_BUS.addListener(Bpm::renderOverlay2D)
+            FORGE_BUS.addListener(Bpm::renderOverlay3D)
             Minecraft.getInstance()
         }, serverTarget = {
-            MOD_BUS.addListener(Bpm::onServerSetup)
             "server"
         })
+        //Server setup, should be done on client too for single player
+        MOD_BUS.addListener(Bpm::onServerSetup)
     }
 
     private fun onRegisterPayloads(event: RegisterPayloadHandlersEvent) {
@@ -99,12 +93,25 @@ object Bpm {
     }
 
     @OnlyIn(Dist.CLIENT)
-    private fun renderOverlay(event: RenderGuiEvent.Pre) {
-        if (Overlay.skipped) return
+    private fun renderOverlay2D(event: RenderGuiEvent.Pre) {
+        if (Overlay2D.skipped) return
         runtime.newFrame()
-        Overlay.render()
+        Overlay2D.render()
         runtime.endFrame()
     }
+
+    @OnlyIn(Dist.CLIENT)
+    private fun renderOverlay3D(event: RenderLevelStageEvent) =
+        if (event.stage == RenderLevelStageEvent.Stage.AFTER_LEVEL)
+            Overlay3D.render(
+                event.levelRenderer,
+                event.poseStack,
+                event.projectionMatrix,
+                event.modelViewMatrix,
+                event.camera,
+                event.frustum
+            )
+        else Unit
 
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogin(event: ClientPlayerNetworkEvent.LoggingIn) {
@@ -120,21 +127,22 @@ object Bpm {
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogout(event: ClientPlayerNetworkEvent.LoggingOut) {
 //        LOGGER.log(Level.INFO, "Client player logging out: ${event.player?.name}")
-//        if (this::runtime.isInitialized) {
-//            runtime.stop()
-//        } else {
-//            LOGGER.log(Level.WARN, "Runtime not initialized when player logged out")
-//        }
+        runtime.disconnect()
     }
 
 
     //On connect to server, start the runtime.
 
-    private fun onServerSetup(event: FMLDedicatedServerSetupEvent) {
+    private fun onServerSetup(event: FMLCommonSetupEvent) {
         LOGGER.log(Level.INFO, "Server starting...")
         //TODO: get the minecraft assets  path and load schemas through resources
-        val server = Server(33456).install<Heartbearts>().install<Environment>()
-            .install<Schemas>(Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas"))
+        val server = Server(33456)
+//            .install<Heartbearts>()
+            .install<Environment>()
+            .install<Schemas>(
+                Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas"),
+                Endpoint.Side.SERVER
+            )
         server.start()
     }
 }

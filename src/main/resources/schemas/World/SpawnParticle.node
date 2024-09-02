@@ -17,7 +17,7 @@ edges:
   location:
     description: 'The location to spawn the particle'
     direction: input
-    type: vec3
+    type: vec3f or vec3i
   type:
     description: 'The type of particle to spawn'
     direction: input
@@ -50,18 +50,16 @@ edges:
 
 source: |
   local _World = java.import('noderspace.server.environment.World')
-  local function ${NODE.name}_${NODE.uid}(location, type, count, velocity, spread)
-    local x = location.x + 0.0
-    local y = location.y + 0.0
-    local z = location.z + 0.0
-  
-    local type = type or 'dust'
-    local vel = velocity or {x = 0.0, y = 0.0, z = 0.0}
-    local count = count or 1
-    local velX = vel.x + 0.0
-    local velY = vel.y + 0.0
-    local velZ = vel.z + 0.0
-    local spread = spread or 0.0
-    _World:spawnParticle(x, y, z, count, velX, velY, velZ, spread, type)
-    ${EXEC.exec_out}
-  end
+  local x = location.x + 0.0
+  local y = location.y + 0.0
+  local z = location.z + 0.0
+
+  local type = type or 'dust'
+  local vel = velocity or {x = 0.0, y = 0.0, z = 0.0}
+  local count = count or 1
+  local velX = vel.x + 0.0
+  local velY = vel.y + 0.0
+  local velZ = vel.z + 0.0
+  local spread = spread or 0.0
+  _World:spawnParticle(x, y, z, count, velX, velY, velZ, spread, type)
+  ${EXEC.exec_out}

@@ -1,5 +1,5 @@
 # OnRun.node
-description: "The main event node for a workflow run."
+description: "Called once after compilation."
 group: Events
 name: Run
 extends: Base/Node
@@ -15,6 +15,7 @@ edges:
     type: exec
 
 source: |
-  local function ${NODE.name}_${NODE.uid}()
-    ${EXEC.exec_out}
-  end
+  ${SETUP.{
+    java.import('java.lang.System').out:println('Hello, World!')
+  }}
+  ${EXEC.exec_out}

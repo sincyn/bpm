@@ -1,7 +1,5 @@
 package noderspace.common.vm
 
-import kotlinx.coroutines.*
-import noderspace.common.codegen.LuaCodeGenerator
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.workspace.Workspace
 import party.iroiro.luajava.*
@@ -34,100 +32,156 @@ object EvalContext {
     private fun initializeLuaState() {
         lua.openLibraries()
         lua.setExternalLoader(ClassPathLoader())
-        defineLuaFunctions()
     }
 
-    private fun defineLuaFunctions() {
-        lua.run(
-            """
-            local Endpoint = java.import("noderspace.common.network.Endpoint").INSTANCE
-            local NotifyPacket = java.import("noderspace.common.workspace.packets.NotifyMessage")
-            function info(message)
-                local endpoint = Endpoint.get()
-                local notifyPacket = NotifyPacket(message)
-                endpoint:sendToAll(notifyPacket)
-            end
-        """.trimIndent()
-        )
-    }
-
-    fun eval(workspace: Workspace) {
+    fun eval(workspace: Workspace): Result {
         val functionGroups = workspaceFunctionGroups.computeIfAbsent(workspace.uid) { ConcurrentHashMap() }
         functionGroups.clear()
-        val compiledSource = LuaCodeGenerator.generateLuaScript(workspace)
-        logger.debug { "Compiled Lua script: $compiledSource" }
-        val result = lua.eval(compiledSource)[0]
-        if (result.type() == Lua.LuaType.TABLE) {
-            for (groupKey in result.keys) {
-                val group = result.get(groupKey)
-                if (group?.type() == Lua.LuaType.TABLE) {
-                    val groupName = groupKey.toString()
-                    functionGroups[groupName] = mutableMapOf()
-                    for (functionKey in group.keys) {
-                        val function = group.get(functionKey)
-                        if (function?.type() == Lua.LuaType.FUNCTION) {
-                            val functionName = functionKey.toString()
-                            functionGroups[groupName]!![functionName] = function
-                            println("Function $groupName.$functionName defined")
+        try {
+//            val compiledSource = LuaTranspiler.generateLuaScript(workspace)
+            val compiledSource = ComplexLuaTranspiler.generateLuaScript(workspace)
+            logger.debug { "Compiled Lua script: $compiledSource" }
+            val result = lua.eval(compiledSource)[0]
+            if (result.type() == Lua.LuaType.TABLE) {
+                for (groupKey in result.keys) {
+                    val group = result.get(groupKey)
+                    if (group?.type() == Lua.LuaType.TABLE) {
+                        val groupName = groupKey.toString()
+                        functionGroups[groupName] = mutableMapOf()
+                        for (functionKey in group.keys) {
+                            val function = group.get(functionKey)
+                            if (function?.type() == Lua.LuaType.FUNCTION) {
+                                val functionName = functionKey.toString()
+                                functionGroups[groupName]!![functionName] = function
+                                logger.debug { "Added function `$functionName` to group `$groupName`" }
+                            }
                         }
                     }
                 }
             }
+        } catch (e: LuaException) {
+            return RuntimeError(e.message ?: "Unknown error", e.stackTrace)
+        }
+        return Success("Workspace evaluated successfully")
+    }
+
+
+    data class Success(val value: Any?, private val functionName: String? = null) : Result() {
+
+        override val message: String
+            get() = if (functionName != null) "Success in function `$functionName`: $result" else "Success: $result"
+    }
+
+    abstract class Failure(val error: String, private val functionName: String? = null) : Result() {
+
+        override val message: String get() = if (functionName != null) "Error in function `$functionName`: $error" else "Error: $error"
+    }
+
+    data class RuntimeError(
+        val errorMessage: String, val stackTrace: Array<StackTraceElement>, private val func: String? = null
+    ) : Failure(errorMessage, func) {
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is RuntimeError) return false
+
+            if (errorMessage != other.errorMessage) return false
+            if (!stackTrace.contentEquals(other.stackTrace)) return false
+            if (func != other.func) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = errorMessage.hashCode()
+            result = 31 * result + stackTrace.contentHashCode()
+            result = 31 * result + (func?.hashCode() ?: 0)
+            return result
         }
     }
 
+    data class InvalidWorkspace(val workspaceId: UUID, private val func: String? = null) :
+        Failure("Invalid workspace with id `$workspaceId`!", func)
 
-    data class Success(val successes: List<Any?>)
+    data class GroupNotFound(val groupName: String, private val func: String? = null) :
+        Failure("Group `$groupName` not found!", func)
 
-    data class Failure(val error: String, val failedFunctions: List<String>)
+    data class GroupResult(val groupName: String, val results: List<Result>) : Result() {
 
-    data class Result(val successes: Success? = null, val failure: Failure? = null) {
-
-        val isSuccess: Boolean
-            get() = successes != null
-
-        val hasResults: Boolean
-            get() = successes != null && successes.successes.isNotEmpty()
-
-        val results: List<Any?>
-            get() = successes?.successes ?: emptyList()
-
-        val isFailure: Boolean
-            get() = failure != null
+        override val message: String
+            get() = "Group `$groupName` results: ${results.joinToString { "${it.message}\n" }}"
     }
 
+    sealed class Result {
+
+        abstract val message: String
+        val isSuccess: Boolean
+            get() = this is Success
+
+        val isFailure: Boolean
+            get() = this is Failure
+
+        val isRealFailure: Boolean
+            get() = this is Failure && !isNotFound
+
+        val hasFailure: Boolean
+            get() = when (this) {
+                is Failure -> true
+                is GroupResult -> results.any { it.hasFailure }
+                else -> false
+            }
+
+        val result: Any?
+            get() = if (this is Success) this.value else null
+
+        val successes: List<Success>
+            get() = when (this) {
+                is Success -> listOf(this)
+                is GroupResult -> results.filterIsInstance<Success>()
+                else -> emptyList()
+            }
+
+        val failures: List<Failure>
+            get() = when (this) {
+                is Failure -> listOf(this)
+                is GroupResult -> results.filterIsInstance<Failure>()
+                else -> emptyList()
+            }
+
+        //True when all failures are GroupNotFound
+        val isNotFound get() = failures.all { it is GroupNotFound }
+
+
+        override fun toString(): String = message
+    }
+
+
     fun callFunction(workspace: Workspace, groupName: String, vararg args: Any?): Result {
-        val functionGroups = workspaceFunctionGroups[workspace.uid] ?: return Result(
-            null,
-            Failure("Workspace not found", emptyList())
+        val functionGroups = workspaceFunctionGroups[workspace.uid] ?: return InvalidWorkspace(
+            workspace.uid
         )
-        val group = functionGroups[groupName] ?: return Result(
-            null,
-            Failure("Group $groupName not found", emptyList())
-        )
-        val successes = mutableListOf<Any?>()
+        val group = functionGroups[groupName] ?: return GroupNotFound(groupName)
+        val results = mutableSetOf<Result>()
         for ((functionName, function) in group) {
             try {
                 val result = function.call(*args)
-                successes.addAll(result.map { value -> value.toJavaObject() })
+                results.add(Success(result, functionName))
             } catch (e: LuaException) {
-                logger.warn { "Failed to call function $groupName.$functionName: ${e.message}" }
-                return Result(
-                    null,
-                    Failure(e.message ?: "Unknown error", listOf("$groupName.$functionName"))
-                )
+                results.add(RuntimeError(e.message ?: "Unknown error", e.stackTrace, functionName))
             }
         }
-        return Result(Success(successes), null)
+        return GroupResult(groupName, results.toList())
     }
 
-    fun callAllFunctions(workspace: Workspace, vararg args: Any?): List<Any?> {
-        val functionGroups = workspaceFunctionGroups[workspace.uid] ?: return emptyList()
-        return functionGroups.values.flatMap { group ->
-            group.values.flatMap { function ->
-                function.call(*args).map { value -> value.toJavaObject() }
-            }
+    fun callAllFunctions(workspace: Workspace, vararg args: Any?): Result {
+        val functionGroups = workspaceFunctionGroups[workspace.uid] ?: return InvalidWorkspace(
+            workspace.uid
+        )
+        val results = mutableSetOf<Result>()
+        for ((groupName, group) in functionGroups) {
+            results.add(callFunction(workspace, groupName, *args))
         }
+        return GroupResult("All", results.toList())
     }
 
     fun close() {

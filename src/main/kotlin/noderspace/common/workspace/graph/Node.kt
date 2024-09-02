@@ -10,7 +10,6 @@ import java.util.UUID
 data class Node(override val properties: PropertyMap = Property.Object()) : PropertySupplier {
 
 
-
     /**
      * [uid] is a read-only variable of type [UUID] that generates a random UUID
      * using [UUID.randomUUID()] only if not provided by the [properties] map.
@@ -132,6 +131,10 @@ data class Node(override val properties: PropertyMap = Property.Object()) : Prop
      */
     operator fun get(name: String): Property<*> {
         return properties[name]
+    }
+
+    infix fun getProperty(s: String): Property<*> {
+        return properties[s]
     }
 
 

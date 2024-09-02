@@ -1,6 +1,7 @@
 package bpm.mc.registries
 
 import bpm.Bpm
+import bpm.mc.item.EnderControllerItem
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.neoforged.bus.api.IEventBus
@@ -12,7 +13,7 @@ object ModItems {
     val ITEMS = DeferredRegister.createItems(Bpm.ID)
 
     val ENDER_CONTROLLER = ITEMS.registerItem("ender_pipe_controller") {
-        BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Properties())
+        EnderControllerItem()
     }
 
     val ENDER_PROXY = ITEMS.registerItem("ender_pipe_proxy") {

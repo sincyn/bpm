@@ -1,7 +1,7 @@
 # GreaterThan.node
 description: "Compares if the first value is greater than the second"
 group: Logic
-name: GreaterThan
+name: Greater Than
 extends: Base/Node
 
 theme:
@@ -11,20 +11,18 @@ theme:
   icon: 0x003e
 
 edges:
-  value_a:
+  ValueA:
     description: 'The first value to compare'
     direction: input
     type: number
-  value_b:
+  ValueB:
     description: 'The second value to compare'
     direction: input
     type: number
-  result:
+  Result:
     description: 'The result of the comparison'
     direction: output
     type: boolean
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(value_a, value_b)
-    return value_a > value_b
-  end
+  return ValueA > ValueB

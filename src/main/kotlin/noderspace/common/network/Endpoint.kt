@@ -83,7 +83,7 @@ abstract class Endpoint<T : Endpoint<T>> {
      *
      * @see Listener
      */
-    protected val listeners: MutableList<Listener> = mutableListOf()
+    val listeners: MutableList<Listener> = mutableListOf()
 
     /**
      * Mutable map of typed listeners.
@@ -147,7 +147,7 @@ abstract class Endpoint<T : Endpoint<T>> {
         if (!runningRef.get()) return
         runningRef.set(false)
         logger.info { "Endpoint has been unregistered, waiting one second for graceful shutdown..." }
-        ref.set(null)
+        serverRef.set(null)
         terminate()
         teardownListeners()
         logger.info { "Endpoint has been stopped" }
@@ -272,7 +272,7 @@ abstract class Endpoint<T : Endpoint<T>> {
      *
      * @see Listener
      */
-    fun tellListeners(tellListener: Listener.() -> Unit) = synchronized(listeners) { listeners.forEach(tellListener) }
+    fun tellListeners(tellListener: Listener.() -> Unit) = listeners.forEach(tellListener)
 
     /**
      * Sends the given packet to a specified ID. If no ID is specified, the packet will be sent to all connected endpoints.
@@ -375,7 +375,8 @@ abstract class Endpoint<T : Endpoint<T>> {
 
     companion object {
 
-        internal val ref: AtomicReference<Endpoint<*>> = AtomicReference()
+        internal val serverRef: AtomicReference<Endpoint<*>> = AtomicReference()
+        internal val clientRef: AtomicReference<Endpoint<*>> = AtomicReference()
 
         private val logger = KotlinLogging.logger { }
 
@@ -385,7 +386,10 @@ abstract class Endpoint<T : Endpoint<T>> {
          * @return the `Endpoint` returned by the `get` method of the instance.
          */
 
-        fun get(): Endpoint<*> = ref.get()
+        fun get(side: Side): Endpoint<*> = when (side) {
+            Side.SERVER -> serverRef.get()
+            Side.CLIENT -> clientRef.get()
+        }
 
         /**
          * Checks if a listener of type [L] is installed.
@@ -393,42 +397,7 @@ abstract class Endpoint<T : Endpoint<T>> {
          * @return `true` if a listener of type [L] is installed, otherwise `false`.
          * @throws NoSuchElementException if [L] does not implement any listener interface.
          */
-        inline fun <reified L : Listener> installed() = get().installed<L>()
-
-        /**
-         * Determines whether the current instance is a server.
-         *
-         * @return `true` if the current instance is a server, `false` otherwise.
-         */
-        fun isServer(): Boolean = ref.get() is Server
-
-        /**
-         * Checks if the current instance is a client.
-         *
-         * @return `true` if the current instance is a client, `false` otherwise.
-         */
-        fun isClient(): Boolean = ref.get() is Client
-
-        /**
-         * Executes the given block of code if the current instance is a server.
-         *
-         * @param block the block of code to be executed
-         */
-        fun whenServer(block: Server.() -> Unit) {
-            if (isServer()) block(ref.get() as Server)
-            else logger.warn { "Cannot execute block because the current instance is not a server" }
-        }
-
-        /**
-         * Executes the given block of code if the current instance is a client.
-         * The block is executed on the instance of the client.
-         *
-         * @param block the block of code to execute on the client instance
-         */
-        fun whenClient(block: Client.() -> Unit) {
-            if (isClient()) block(ref.get() as Client)
-            else logger.warn { "Cannot execute block because the current instance is not a client" }
-        }
+        inline fun <reified L : Listener> installed(side: Side = Side.CLIENT) = get(side).installed<L>()
 
 
         /**
@@ -440,7 +409,12 @@ abstract class Endpoint<T : Endpoint<T>> {
          *
          * @return the type of the system
          */
-        val side: Side get() = if (isServer()) Side.SERVER else Side.CLIENT
+        val side: Side
+            get() = when {
+                serverRef.get() != null -> Side.SERVER
+                clientRef.get() != null -> Side.CLIENT
+                else -> throw IllegalStateException("Endpoint is not a client or server")
+            }
 
     }
 

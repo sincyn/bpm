@@ -1,36 +1,28 @@
 # LessThan.node
 description: "Compares if the first value is less than the second"
 group: Logic
-name: LessThan
+name: Less Than
 extends: Base/Node
 
 theme:
   color: '#6b4c9a'
   width: 140
   height: 60
-  icon: 0x003c
+  icon: 0x003e
 
 edges:
-  value a:
+  ValueA:
     description: 'The first value to compare'
     direction: input
     type: number
-    value:
-      type: int
-      default: 0
-  value b:
+  ValueB:
     description: 'The second value to compare'
     direction: input
     type: number
-    value:
-      type: int
-      default: 0
-  result:
+  Result:
     description: 'The result of the comparison'
     direction: output
     type: boolean
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(value_a, value_b)
-    return value_a < value_b
-  end
+  return ValueA < ValueB

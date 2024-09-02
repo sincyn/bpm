@@ -1,6 +1,6 @@
 package noderspace.client.runtime
 
-import bpm.mc.gui.Overlay
+import bpm.mc.visual.Overlay2D
 import imgui.ImGui
 import imgui.ImGuiIO
 import imgui.flag.ImGuiConfigFlags
@@ -17,10 +17,13 @@ import noderspace.common.logging.KotlinLogging
 import noderspace.common.managers.Heartbearts
 import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
+import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
 import noderspace.common.network.NetUtils
 import noderspace.common.network.Network.new
 import noderspace.common.packets.Packet
+import noderspace.common.packets.internal.ConnectResponsePacket
+import noderspace.common.packets.internal.DisconnectPacket
 import noderspace.common.utils.FontAwesome
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Node
@@ -90,12 +93,10 @@ class Runtime(
      *
      * @param client The client to be set up.
      */
-    private fun createClient(client: Client) =
-        client.install(this)
-            .install<Heartbearts>()
-            .install<Schemas>(Path.of("/Users/jamesraynor/Documents/nodeer/graph-common/src/main/resources/assets/schemas"))
-            .install<CanvasContext>()
-            .install<Overlay>()
+    private fun createClient(client: Client) = client.install(this)
+//        .install<Heartbearts>()
+        .install<Schemas>(Path.of(""), Endpoint.Side.CLIENT)
+        .install<CanvasContext>().install<Overlay2D>()
 
 
     /**
@@ -223,7 +224,6 @@ class Runtime(
         connectionExecutor.execute {
             while (running && reconnectAttempts < maxReconnectAttempts) {
                 try {
-                    client.connect(host, port)
                     logger.info { "Connected to server: $host:$port" }
                     reconnectAttempts = 0
                     break
@@ -254,8 +254,19 @@ class Runtime(
 //    fun connect() = client.connect()
 
     fun connect(host: String, port: Int) {
-        connectWithRetry(host, port)
-        startConnectionMonitor(host, port)
+//        connectWithRetry(host, port)
+//        startConnectionMonitor(host, port)
+        if (!client.connected) {
+            client.connect(host, port)
+        }
+    }
+
+
+    fun disconnect() {
+        if (client.connected) {
+            canvasWindow?.close()
+            client.disconnect()
+        }
     }
 
     /**
@@ -292,12 +303,27 @@ class Runtime(
      * @param packet the packet that was received
      */
     override fun onPacket(packet: Packet, from: UUID): Unit = when (packet) {
-//        is WorkspaceLibrary -> {
-//            // Queue up the workspace library packet
-//            queuedWorkspaceLibrary = packet
-//            hasRequestedWorkspaceLibrary = false // Reset the flag
-//            logger.info { "Received workspace library response: ${packet.workspaces}" }
-//        }
+
+        is ConnectResponsePacket -> {
+            if (!packet.valid) {
+                logger.error { "Connection was not valid" }
+//                        disconnected(connection)
+                client.terminate()
+            }
+            synchronized(client.listeners) {
+                client.listeners.forEach {
+                    it.onConnect(NetUtils.DefaultUUID)
+                }
+            }
+        }
+
+        is DisconnectPacket -> {
+            if (packet.uuid == clientUid) {
+                client.disconnect()
+            } else {
+                logger.warn { "Received disconnect packet with invalid UUID" }
+            }
+        }
 
         is WorkspaceLoad -> {
             this.workspace = packet.workspace
@@ -389,6 +415,7 @@ class Runtime(
     fun openCanvas() {
         canvasWindow?.open()
     }
+
 
     /**
      * Enumeration representing different types of mouse buttons.

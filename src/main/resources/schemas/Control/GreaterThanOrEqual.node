@@ -1,28 +1,28 @@
-# EqualTo.node
-description: "Compares if two values are equal"
+# LessThan.node
+description: "Checks if the second value is greater than or equal to the second value"
 group: Logic
-name: EqualTo
+name: Less Than Or Equal
 extends: Base/Node
 
 theme:
   color: '#6b4c9a'
   width: 140
   height: 60
-  icon: 0x003d
+  icon: 0x003e
 
 edges:
-  value_a:
+  ValueA:
     description: 'The first value to compare'
     direction: input
-    type: any
-  value_b:
+    type: number
+  ValueB:
     description: 'The second value to compare'
     direction: input
-    type: any
-  result:
+    type: number
+  Result:
     description: 'The result of the comparison'
     direction: output
     type: boolean
 
 source: |
-  return value_a == value_b
+  return ValueA > ValueB or ValueA == ValueB

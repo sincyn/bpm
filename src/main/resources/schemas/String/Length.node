@@ -21,7 +21,5 @@ edges:
     direction: output
     type: number
 source: |
-  local function ${NODE.name}_${NODE.uid}(string)
-    local str = tostring(string) or ""
-    return string.len(str)
-  end
+  local str = tostring(string) or ""
+  return string.len(str)

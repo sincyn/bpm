@@ -1,6 +1,8 @@
 package noderspace.common.network
 
 
+import bpm.network.MinecraftNetworkAdapter
+import bpm.network.ServerTarget
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Network.new
 import noderspace.common.packets.*
@@ -9,12 +11,12 @@ import java.net.Socket
 import java.net.SocketException
 import java.util.*
 
-class Client(val uuid: UUID = NetUtils.DefaultUUID) :
+class Client(val uuid: UUID) :
     Endpoint<Client>(),
     Runnable {
 
     init {
-        ref.set(this)
+        clientRef.set(this)
     }
 
     private var ipAddress: String = "localhost"
@@ -48,7 +50,7 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
      *
      * @return The connection object.
      */
-    private lateinit var connection: Connection
+    private var connection: Connection? = null
     /**
      * Flag indicating whether the variable is terminated or not.
      */
@@ -66,7 +68,7 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
     override fun connected(id: Connection) {
         send(new<ConnectRequest> {
             this.uuid = this@Client.uuid
-        }, id)
+        })
     }
 
 
@@ -75,10 +77,12 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
 
             this.ipAddress = ipAddress
             this.port = port
-            socket = Socket(ipAddress, port)
-            connection = Connection(uuid, Side.CLIENT, socket)
+//            socket = Socket(ipAddress, port)
+//            connection = Connection(uuid, Side.CLIENT, socket)
             connected = true
-            connected(connection)
+            send(new<ConnectRequest> {
+                this.uuid = this@Client.uuid
+            })
         } catch (e: Exception) {
             logger.error {
                 "Failed to connect to server at $ipAddress:$port"
@@ -93,8 +97,8 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
      */
     override fun initiate() {
         try {
-            thread.isDaemon = true
-            thread.start()
+//            thread.isDaemon = true
+//            thread.start()
             worker.start()
         } catch (e: Exception) {
             logger.error {
@@ -108,40 +112,55 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
      * Handles the client's operations in a separate thread.
      */
     override fun run() {
-        while (runningRef.get()) {
-            if (!connected) continue
+//        while (runningRef.get()) {
+//            if (!connected) continue
+//
+////            val packet = receive(connection) ?: continue
+////            when (packet) {
+////                is ConnectResponsePacket -> {
+////                    if (!packet.valid) {
+////                        logger.error { "Connection was not valid" }
+//////                        disconnected(connection)
+////                        terminate()
+////                        return
+////                    }
+////                    synchronized(listeners) {
+////                        listeners.forEach {
+////                            it.onConnect(NetUtils.DefaultUUID)
+////                        }
+////                    }
+////                }
+////
+////                is DisconnectPacket -> {
+////                    if (packet.uuid != uuid) {
+////                        logger.warn { "Received disconnect packet with invalid UUID" }
+////                        return
+////                    }
+////                    disconnect()
+////                    return
+////                }
+////
+////                else -> worker.queue(packet, NetUtils.DefaultUUID)
+////
+////            }
+//
+//        }
+//        terminate()
+    }
 
-            val packet = receive(connection) ?: continue
-            when (packet) {
-                is ConnectResponsePacket -> {
-                    if (!packet.valid) {
-                        logger.error { "Connection was not valid" }
-                        disconnected(connection)
-                        terminate()
-                        return
-                    }
-                    synchronized(listeners) {
-                        listeners.forEach {
-                            it.onConnect(connection.uuid)
-                        }
-                    }
-                }
-
-                is DisconnectPacket -> {
-                    if (packet.uuid != uuid) {
-                        logger.warn { "Received disconnect packet with invalid UUID" }
-                        return
-                    }
-                    disconnected(connection)
-                    return
-                }
-
-                else -> worker.queue(packet, connection.uuid)
-
+    internal fun disconnect() {
+        // notify the server that we're disconnecting
+        send(new<DisconnectPacket> {
+            this.uuid = this@Client.uuid
+        })
+        logger.info { "Sent client disconnection packet" }
+        synchronized(listeners) {
+            listeners.forEach {
+                it.onDisconnect(NetUtils.DefaultUUID)
             }
-
         }
-        terminate()
+
+        connected = false
     }
 
     /**
@@ -167,10 +186,22 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
     override fun terminate() {
         runningRef.set(false)
         try {
-            disconnected(connection)
-            socket.close()
+//            disconnected(connection)
+
+            // notify the server that we're disconnecting
+            send(new<DisconnectPacket> {
+                this.uuid = this@Client.uuid
+            })
+            logger.info { "Sent client disconnection packet" }
+            synchronized(listeners) {
+                listeners.forEach {
+                    it.onDisconnect(uuid)
+                }
+            }
+
+//            socket.close()
         } catch (e: Exception) {
-            logger.error(e) { "Failed to close socket" }
+            logger.error(e) { "Failed to close socket ${e.message}" }
         }
     }
 
@@ -180,8 +211,9 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
      */
     override fun send(packet: Packet, id: Connection?) {
         try {
-            val input = socket.getOutputStream() ?: throw SocketException("Socket output stream is null")
-            packet.write(input)
+//            val input = socket.getOutputStream() ?: throw SocketException("Socket output stream is null")
+//            packet.write(input)
+            MinecraftNetworkAdapter.sendPacket(packet, ServerTarget)
             logger.info { "Sent packet of type ${packet::class.simpleName} with id ${packet.id}" }
         } catch (ex: SocketException) {
             runningRef.set(false)
@@ -201,24 +233,32 @@ class Client(val uuid: UUID = NetUtils.DefaultUUID) :
      * @return The received packet, or null if no packet is received.
      */
     override fun receive(id: Connection?): Packet? {
-        if (!runningRef.get()) return null
-        try {
-            val input = id?.socket?.getInputStream() ?: throw SocketException("Socket is null")
-            val packet = input.readPacket() ?: return null
-            logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
-            return packet
-        } catch (ex: SocketException) {
-            logger.warn { "Socket exception: ${ex.message}" }
-            runningRef.set(false)
-            return null
-        }
+//        if (!runningRef.get()) return null
+//        try {
+//            val input = id?.socket?.getInputStream() ?: throw SocketException("Socket is null")
+//            val packet = input.readPacket() ?: return null
+//            logger.info { "Received packet of type ${packet::class.simpleName} with id ${packet.id}" }
+//            return packet
+//        } catch (ex: SocketException) {
+//            logger.warn { "Socket exception: ${ex.message}" }
+//            runningRef.set(false)
+//            return null
+//        }
+        return null
     }
 
     /**
      * Retrieves the current connection.
      */
     override fun get(connectionID: UUID): Connection? {
-        return if (connection.uuid == connectionID) connection else null
+        return null
+    }
+
+    companion object {
+
+        operator fun invoke(): Client {
+            return Endpoint.clientRef.get() as Client
+        }
     }
 
     // Implement other methods if needed
