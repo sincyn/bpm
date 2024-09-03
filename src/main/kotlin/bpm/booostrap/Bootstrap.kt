@@ -30,6 +30,7 @@ import noderspace.common.serial.Serialize
 import noderspace.common.utils.*
 import noderspace.server.environment.ServerRuntime
 import bpm.lua.LuaBuiltin
+import bpm.pipe.PipeNetworkManager
 import org.apache.logging.log4j.Level
 import thedarkcolour.kotlinforforge.neoforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
@@ -204,7 +205,8 @@ class Bootstrap(
         //We initialize this here because it's available on the client too for single player
         Server.install<ServerRuntime>().install<Schemas>(
             schemaPath, Endpoint.Side.SERVER
-        ).start()
+        ).install<PipeNetworkManager>()
+            .start()
     }
 
 

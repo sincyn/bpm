@@ -111,18 +111,17 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         PipeNetworkManager.onPipeRemoved(this, level, pos)
     }
 
+
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
         if (!level.isClientSide) {
-            onPipeAdded(level, pos)
+            PipeNetworkManager.onPipeAdded(this, level, pos)
         }
     }
 
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
         if (!level.isClientSide && state.block != newState.block) {
             PipeNetworkManager.onPipeRemoved(this, level, pos)
-            // Force an update of the network to ensure it recognizes the removed controller
-            PipeNetworkManager.updateNetwork(level, pos)
         }
         super.onRemove(state, level, pos, newState, isMoving)
     }

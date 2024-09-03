@@ -68,7 +68,6 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     }
 
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
-        //Calls the BLock super onplace, not the BasePipeBlock
         if (!level.isClientSide) {
             if (PipeNetworkManager.hasControllerInNetwork(level, pos)) {
                 dropController(level, pos)
@@ -77,8 +76,7 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             }
 
             PipeNetworkManager.onPipeAdded(this, level, pos)
-            // Force an update of the network to ensure it recognizes the new controller
-            PipeNetworkManager.updateNetwork(level, pos)
+            // Remove the direct call to updateNetwork
         }
     }
 
@@ -88,7 +86,7 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     ) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving)
         if (!level.isClientSide) {
-            PipeNetworkManager.updateNetwork(level, pos)
+            PipeNetworkManager.queueNetworkUpdate(level, pos)
         }
     }
 
@@ -122,9 +120,11 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         if (blockEntity != null && !level.isClientSide && block is EnderControllerBlock) {
             PipeNetworkManager.onPipeRemoved(block, level, pos)
             dropController(level, pos)
+            // Remove the direct call to updateNetwork
         }
         return super.playerWillDestroy(level, pos, state, player)
     }
+
 
     fun makeShape(): VoxelShape {
         var shape = Shapes.empty()

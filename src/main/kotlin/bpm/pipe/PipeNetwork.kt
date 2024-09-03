@@ -1,56 +1,63 @@
 package bpm.pipe
-
 import bpm.mc.block.BasePipeBlock
+import bpm.mc.block.EnderControllerBlock
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.level.Level
+import noderspace.common.logging.KotlinLogging
+
+
 
 class PipeNetwork {
+    data class LevelPipe(val level: Level, val pipe: BasePipeBlock, val pos: BlockPos)
 
-    val pipes = mutableMapOf<BlockPos, BasePipeBlock>()
+    val pipes = ConcurrentHashMap<BlockPos, LevelPipe>()
+    private val logger = KotlinLogging.logger {}
 
     fun addPipe(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
-        pipes[pos] = pipe
+        pipes[pos] = LevelPipe(level, pipe, pos)
+        logger.debug { "Added pipe at $pos to network" }
     }
 
     fun removePipe(level: Level, pos: BlockPos) {
         pipes.remove(pos)
+        logger.debug { "Removed pipe at $pos from network" }
     }
 
-    fun contains(level: Level, pos: BlockPos): Boolean = pos in pipes
+    fun contains(level: Level, pos: BlockPos): Boolean = pipes.containsKey(pos)
 
     fun isEmpty(): Boolean = pipes.isEmpty()
 
     fun split(level: Level, removedPos: BlockPos): List<PipeNetwork> {
         val newNetworks = mutableListOf<PipeNetwork>()
-        val remainingPipes = pipes.toMutableMap()
-        remainingPipes.remove(removedPos)
+        val remainingPipes = pipes.toMap()
+        val processed = mutableSetOf<BlockPos>()
 
-        while (remainingPipes.isNotEmpty()) {
-            val startPos = remainingPipes.keys.first()
-            val newNetwork = PipeNetwork()
-            val connectedPipes = findConnectedPipes(level, startPos, remainingPipes)
-            connectedPipes.forEach { (pos, pipe) ->
-                newNetwork.addPipe(pipe, level, pos)
-                remainingPipes.remove(pos)
+        for ((pos, levelPipe) in remainingPipes) {
+            if (pos in processed) continue
+            val connectedPipes = findConnectedPipes(pos, remainingPipes)
+            if (connectedPipes.isNotEmpty()) {
+                val newNetwork = PipeNetwork()
+                connectedPipes.forEach { (connectedPos, connectedLevelPipe) ->
+                    newNetwork.addPipe(connectedLevelPipe.pipe, level, connectedPos)
+                    processed.add(connectedPos)
+                }
+                newNetworks.add(newNetwork)
             }
-            newNetworks.add(newNetwork)
         }
 
+        logger.info { "Network split into ${newNetworks.size} networks" }
         return newNetworks
     }
 
-    fun updateConnections(level: Level) {
-        val connectedPipes = findConnectedPipes(level, pipes.keys.first(), pipes)
-        pipes.keys.retainAll(connectedPipes.keys)
-    }
-
     private fun findConnectedPipes(
-        level: Level,
         start: BlockPos,
-        availablePipes: Map<BlockPos, BasePipeBlock>
-    ): Map<BlockPos, BasePipeBlock> {
-        val connectedPipes = mutableMapOf<BlockPos, BasePipeBlock>()
+        availablePipes: Map<BlockPos, LevelPipe>
+    ): Map<BlockPos, LevelPipe> {
+        val connectedPipes = mutableMapOf<BlockPos, LevelPipe>()
         val queue = ArrayDeque<BlockPos>()
         queue.add(start)
 
@@ -68,5 +75,16 @@ class PipeNetwork {
         }
 
         return connectedPipes
+    }
+
+    fun cleanupGhostPipes() {
+        val ghostPipes = pipes.entries.filter { (pos, pipe) ->
+            val blockState = pipe.level.getBlockState(pos)
+            blockState.block !is BasePipeBlock
+        }
+        ghostPipes.forEach { (pos, pipe) ->
+            removePipe(pipe.level, pos)
+            logger.warn { "Removed ghost pipe at $pos" }
+        }
     }
 }
