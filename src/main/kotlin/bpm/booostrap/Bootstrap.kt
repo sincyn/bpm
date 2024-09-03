@@ -29,6 +29,7 @@ import noderspace.common.serial.Serial
 import noderspace.common.serial.Serialize
 import noderspace.common.utils.*
 import noderspace.server.environment.ServerRuntime
+import noderspace.server.environment.lua.LuaBuiltin
 import org.apache.logging.log4j.Level
 import thedarkcolour.kotlinforforge.neoforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
@@ -44,6 +45,7 @@ class Bootstrap(
     private val registriesList = mutableListOf<ModRegistry<*>>()
     private val packetsList = mutableListOf<KClass<out Packet>>()
     private val serializableList = mutableListOf<KClass<out Serialize<*>>>()
+    private val builtIns = mutableListOf<LuaBuiltin>()
     private val ourResults = results.fromPackages("noderspace", "bpm")
 
     /**
@@ -184,7 +186,6 @@ class Bootstrap(
         }
 
 
-
     }
 
 
@@ -219,10 +220,15 @@ class Bootstrap(
         throw IllegalStateException("Class $clazz is not a ModRegistry")
     }
 
+    private fun collectLuaBuildIng() {
+        ourResults.classesImplementing<LuaBuiltin>().forEach {
+            builtIns.add(it.objectInstance ?: it.createInstance())
+        }
+    }
+
     private fun collectRegistries() {
         logger.info("Collecting registries")
-        val modRegistries = ourResults.classesImplementing<ModRegistry<*>>()
-            .map { createOrGetModRegistryInstance(it) }
+        val modRegistries = ourResults.classesImplementing<ModRegistry<*>>().map { createOrGetModRegistryInstance(it) }
 
         registriesList.addAll(modRegistries)
 

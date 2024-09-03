@@ -8,7 +8,7 @@ import net.minecraft.server.MinecraftServer
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.server.ServerLifecycleHooks
 
-object World {
+object World : LuaBuiltin {
 
     private val mcServer: MinecraftServer by lazy {
         ServerLifecycleHooks.getCurrentServer() ?: throw IllegalStateException("Server not available")
@@ -17,7 +17,6 @@ object World {
     private val overworld by lazy {
         mcServer.getLevel(Level.OVERWORLD) ?: throw IllegalStateException("Overworld not available")
     }
-
 
     @JvmStatic
     fun signalAt(x: Int, y: Int, z: Int): Int {
@@ -73,5 +72,7 @@ object World {
             else -> ParticleTypes.SMOKE // Default particle if name not recognized
         }
     }
+
+    override val name: String = "World"
 
 }
