@@ -1,7 +1,10 @@
 package bpm.mc.block
 
+import bpm.pipe.PipeNetwork
+import bpm.pipe.PipeNetworkManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.state.BlockState
@@ -50,6 +53,37 @@ class EnderPipeBlock(properties: Properties) : BasePipeBlock(properties) {
         val cacheKey = getShapeCacheKey(state)
         return collisionShapeCache.getOrPut(cacheKey) { createCollisionShapeForState(state) }
     }
+    //Disallows placement if the given block position would connect together two networks that both have controllers
+    override fun getStateForPlacement(ctx: BlockPlaceContext): BlockState? {
+        val level = ctx.level
+        val pos = ctx.clickedPos
+
+        val surroundingNetworks = collectSurroundingNetworksForPos(level, pos)
+        val networksWithControllers = surroundingNetworks.filter { network ->
+            network.pipes.any { (_, pipe) -> pipe.pipe is EnderControllerBlock }
+        }
+
+        if (networksWithControllers.size > 1) {
+            // Disallow placement if it would connect two networks with controllers
+            return null
+        }
+
+        // If placement is allowed, get the updated state
+        return getUpdatedState(level, pos, defaultBlockState())
+    }
+
+    private fun collectSurroundingNetworksForPos(level: Level, pos: BlockPos): List<PipeNetwork> {
+        return Direction.values().mapNotNull { direction ->
+            val neighborPos = pos.relative(direction)
+            val neighborState = level.getBlockState(neighborPos)
+            if (neighborState.block is BasePipeBlock) {
+                PipeNetworkManager.getNetworkForPos(level, neighborPos)
+            } else {
+                null
+            }
+        }.distinct()
+    }
+
 
     private fun getShapeCacheKey(state: BlockState): Int {
         var key = 0

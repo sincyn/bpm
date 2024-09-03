@@ -3,8 +3,13 @@ package bpm.pipe
 import bpm.mc.block.BasePipeBlock
 import bpm.mc.block.EnderControllerBlock
 import bpm.mc.block.EnderControllerTileEntity
+import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.core.component.DataComponents.CUSTOM_NAME
+import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Listener
@@ -16,6 +21,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 object PipeNetworkManager : Listener {
+
     private val networks = mutableListOf<PipeNetwork>()
     private val pipeTypeCache = ConcurrentHashMap<Class<out BasePipeBlock>, MutableSet<BlockPos>>()
     private val logger = KotlinLogging.logger {}
@@ -23,7 +29,7 @@ object PipeNetworkManager : Listener {
     private val lock = ReentrantLock()
     private val pendingUpdates = mutableSetOf<PipeNetwork.LevelPipe>()
     private val updateInProgress = AtomicBoolean(false)
-   fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
+    fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         addToTypeCache(pipe, pos)
         queueNetworkUpdate(level, pos)
         logger.info { "Adding pipe at $pos of type ${pipe::class.simpleName}" }
@@ -46,7 +52,7 @@ object PipeNetworkManager : Listener {
 
     fun queueNetworkUpdate(level: Level, pos: BlockPos) {
         val block = level.getBlockState(pos).block
-        if(block !is BasePipeBlock) {
+        if (block !is BasePipeBlock) {
             logger.warn { "Tried to queue network update for non-pipe block at $pos" }
             return
         }
@@ -77,6 +83,7 @@ object PipeNetworkManager : Listener {
 
         cleanupNetworks()
     }
+
     private fun updateNetworkAt(level: Level, pos: BlockPos) {
         val blockState = level.getBlockState(pos)
         val block = blockState.block
@@ -101,6 +108,10 @@ object PipeNetworkManager : Listener {
                 logger.warn { "Couldn't add controller at $pos, no tile entity found" }
             }
         }
+    }
+
+    fun getNetworkForPos(level: Level, pos: BlockPos): PipeNetwork? {
+        return networks.find { network -> network.contains(level, pos) }
     }
 
 
@@ -132,7 +143,48 @@ object PipeNetworkManager : Listener {
         mergedNetwork.addPipe(pipe, level, pos)
         networks.add(mergedNetwork)
         logger.info { "Merged ${networksToMerge.size} networks" }
+        //TODO: When networks are merged, if there's multiple controllers, drop all but one, and import it's workspace int our workspace
+        //Maybe could do this with a imgui confirmation window or something ?
+
+
+        //For now, just remove all controllers but the first one
+        val controllers = networksToMerge.flatMap { it.pipes.values }.filter { it.pipe is EnderControllerBlock }
+        if (controllers.size > 1) {
+            val controller = controllers.first() //Safe to keep
+            processKeptController(controller)
+            controllers.drop(1).forEach { value ->
+                dropController(level, value.pos)
+            }
+        }
     }
+
+    private fun processKeptController(controller: PipeNetwork.LevelPipe) {
+        val tileEntity = controller.level.getBlockEntity(controller.pos) as? EnderControllerTileEntity ?: return
+        //TODO: Combine the workspaces
+//        val uuid = controller.getUUID()
+//        ServerRuntime.recompileWorkspace(uuid)
+    }
+
+    private fun dropController(level: Level, pos: BlockPos) {
+        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+        val state = level.getBlockState(pos)
+        if (blockEntity != null && !level.isClientSide) {
+            val stack = ItemStack(state.block)
+            val serverLevel = level as net.minecraft.server.level.ServerLevel
+            val registryAccess = serverLevel.registryAccess()
+            stack.set(
+                CUSTOM_NAME,
+                Component.literal("Ender Controller").withStyle(ChatFormatting.DARK_PURPLE)
+                    .withStyle(ChatFormatting.BOLD)
+            )
+            blockEntity.saveToItem(stack, registryAccess)
+            ItemEntity(level, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, stack).apply {
+                setDefaultPickUpDelay()
+                level.addFreshEntity(this)
+            }
+        }
+    }
+
 
     private fun findConnectedNetworks(level: Level, pos: BlockPos): List<PipeNetwork> {
         return networks.filter { network ->
@@ -155,7 +207,6 @@ object PipeNetworkManager : Listener {
         ServerRuntime.closeWorkspace(uuid)
         logger.info { "Controller removed: $uuid" }
     }
-
 
 
     private fun addToTypeCache(pipe: BasePipeBlock, pos: BlockPos) {

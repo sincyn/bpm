@@ -63,18 +63,14 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
         val level = context.level
         val pos = context.clickedPos
-
+        if (PipeNetworkManager.hasControllerInNetwork(level, pos)) {
+            return null
+        }
         return super.getStateForPlacement(context)
     }
 
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         if (!level.isClientSide) {
-            if (PipeNetworkManager.hasControllerInNetwork(level, pos)) {
-                dropController(level, pos)
-                level.removeBlock(pos, false)
-                return
-            }
-
             PipeNetworkManager.onPipeAdded(this, level, pos)
             // Remove the direct call to updateNetwork
         }
