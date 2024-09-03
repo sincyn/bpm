@@ -3,9 +3,13 @@ package bpm.mc.block
 import bpm.pipe.PipeNetworkManager
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.BooleanProperty
@@ -45,8 +49,32 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         }
     }
 
-    override fun getStateForPlacement(p_49820_: BlockPlaceContext): BlockState? {
-        return getUpdatedState(p_49820_.level, p_49820_.clickedPos, defaultBlockState())
+    override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
+
+        return getUpdatedState(context.level, context.clickedPos, defaultBlockState())
+    }
+
+    override fun setPlacedBy(
+        p_49847_: Level,
+        p_49848_: BlockPos,
+        p_49849_: BlockState,
+        p_49850_: LivingEntity?,
+        p_49851_: ItemStack
+    ) {
+        super.setPlacedBy(p_49847_, p_49848_, p_49849_, p_49850_, p_49851_)
+        onPipeAdded(p_49847_, p_49848_)
+    }
+
+    override fun playerDestroy(
+        p_49827_: Level,
+        p_49828_: Player,
+        p_49829_: BlockPos,
+        p_49830_: BlockState,
+        p_49831_: BlockEntity?,
+        p_49832_: ItemStack
+    ) {
+        super.playerDestroy(p_49827_, p_49828_, p_49829_, p_49830_, p_49831_, p_49832_)
+        PipeNetworkManager.onPipeRemoved(this, p_49827_,p_49829_)
     }
 
     open fun canConnectTo(level: Level, pos: BlockPos, direction: Direction): Boolean {
@@ -111,18 +139,30 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         PipeNetworkManager.onPipeRemoved(this, level, pos)
     }
 
+    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
+        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+        val block = state.block
+        if (blockEntity != null && !level.isClientSide && block is BasePipeBlock) {
+            PipeNetworkManager.onPipeRemoved(block, level, pos)
+//            dropController(level, pos)
+
+            // Remove the direct call to updateNetwork
+        }
+        return super.playerWillDestroy(level, pos, state, player)
+    }
 
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
-        if (!level.isClientSide) {
-            PipeNetworkManager.onPipeAdded(this, level, pos)
-        }
+//        if (!level.isClientSide) {
+//
+//        }
     }
 
+
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
-        if (!level.isClientSide && state.block != newState.block) {
-            PipeNetworkManager.onPipeRemoved(this, level, pos)
-        }
+//        if (!level.isClientSide && state.block != newState.block) {
+//            PipeNetworkManager.onPipeRemoved(this, level, pos)
+//        }
         super.onRemove(state, level, pos, newState, isMoving)
     }
 }

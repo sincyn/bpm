@@ -69,12 +69,7 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         return super.getStateForPlacement(context)
     }
 
-    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
-        if (!level.isClientSide) {
-            PipeNetworkManager.onPipeAdded(this, level, pos)
-            // Remove the direct call to updateNetwork
-        }
-    }
+
 
 
     override fun neighborChanged(
@@ -110,16 +105,6 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         }
     }
 
-    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
-        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
-        val block = state.block
-        if (blockEntity != null && !level.isClientSide && block is EnderControllerBlock) {
-            PipeNetworkManager.onPipeRemoved(block, level, pos)
-            dropController(level, pos)
-            // Remove the direct call to updateNetwork
-        }
-        return super.playerWillDestroy(level, pos, state, player)
-    }
 
 
     fun makeShape(): VoxelShape {

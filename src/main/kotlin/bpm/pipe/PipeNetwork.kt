@@ -1,6 +1,7 @@
 package bpm.pipe
 import bpm.mc.block.BasePipeBlock
 import bpm.mc.block.EnderControllerBlock
+import bpm.mc.block.EnderControllerTileEntity
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -20,6 +21,13 @@ class PipeNetwork {
     fun addPipe(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         pipes[pos] = LevelPipe(level, pipe, pos)
         logger.debug { "Added pipe at $pos to network" }
+        if(pipe is EnderControllerBlock) {
+            val tile = level.getBlockEntity(pos)
+            if(tile is EnderControllerTileEntity) {
+//                tile.network = this
+                logger.debug { "Added controller at $pos to network" }
+            }
+        }
     }
 
     fun removePipe(level: Level, pos: BlockPos) {

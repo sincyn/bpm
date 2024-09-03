@@ -26,7 +26,6 @@ object PipeNetworkManager : Listener {
     private val pipeTypeCache = ConcurrentHashMap<Class<out BasePipeBlock>, MutableSet<BlockPos>>()
     private val logger = KotlinLogging.logger {}
     private val mappedControllers = ConcurrentHashMap<UUID, MutableSet<EnderControllerTileEntity>>()
-    private val lock = ReentrantLock()
     private val pendingUpdates = mutableSetOf<PipeNetwork.LevelPipe>()
     private val updateInProgress = AtomicBoolean(false)
     fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
@@ -101,11 +100,14 @@ object PipeNetworkManager : Listener {
         }
 
         if (block is EnderControllerBlock) {
-            val entity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+            val entity = level.getBlockEntity(pos)
             if (entity != null) {
-                onControllerPlaced(entity)
+                onControllerPlaced(entity as EnderControllerTileEntity)
+                logger.info { "Controller placed at $pos" }
             } else {
                 logger.warn { "Couldn't add controller at $pos, no tile entity found" }
+                //Wait for the tile entity to be created
+//                queueNetworkUpdate(level, pos)
             }
         }
     }
@@ -163,6 +165,7 @@ object PipeNetworkManager : Listener {
         //TODO: Combine the workspaces
 //        val uuid = controller.getUUID()
 //        ServerRuntime.recompileWorkspace(uuid)
+        onControllerPlaced(tileEntity)
     }
 
     private fun dropController(level: Level, pos: BlockPos) {
@@ -224,8 +227,24 @@ object PipeNetworkManager : Listener {
         }
     }
 
+    // The uuid sometimes isn't correctly initially set because of how chunk loading and tiles, so we just check once
+    // if the uuid is the same as any other controller's uuid, we update the mapping
+    private fun patchControllerUuids(uuid: UUID) = mappedControllers.forEach { (key, value) ->
+        value.forEach { controller ->
+            if (controller.getUUID() == uuid) {
+                mappedControllers.remove(key)
+                mappedControllers[uuid] = value
+            }
+        }
+    }
+
     fun getController(uuid: UUID): EnderControllerTileEntity? {
-        return mappedControllers[uuid]?.firstOrNull()
+        val controller =  mappedControllers[uuid]?.firstOrNull()
+        if (controller == null) {
+            patchControllerUuids(uuid)
+            return mappedControllers[uuid]?.firstOrNull()
+        }
+        return controller
     }
 
     fun getControllers(): List<EnderControllerTileEntity> {
@@ -233,11 +252,11 @@ object PipeNetworkManager : Listener {
     }
 
     fun getControllerPosition(uuid: UUID): BlockPos? {
-        return mappedControllers[uuid]?.firstOrNull()?.blockPos
+        return getController(uuid)?.blockPos
     }
 
     fun getControllerPositions(uuid: UUID): List<BlockPos> {
-        return mappedControllers[uuid]?.map { it.blockPos } ?: emptyList()
+        return getControllers().map { it.blockPos }
     }
 
     fun getControllerPositions(): List<BlockPos> {
