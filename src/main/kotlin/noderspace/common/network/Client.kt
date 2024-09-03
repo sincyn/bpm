@@ -41,6 +41,7 @@ object Client : Endpoint<Client>() {
     }
 
     fun connect(): Client {
+        if (connected) return this
         send(new<ConnectRequest> {
             this.uuid = this@Client.uuid
         })
@@ -65,59 +66,25 @@ object Client : Endpoint<Client>() {
 
 
     internal fun disconnect() {
-        // notify the server that we're disconnecting
-//        send(new<DisconnectPacket> {
-//            this.uuid = this@Client.uuid
-//        })
+        if(!connected) return
+        send(new<DisconnectPacket> {
+            this.uuid = this@Client.uuid
+        })
         logger.info { "Sent client disconnection packet" }
-//        synchronized(listeners) {
-//            listeners.forEach {
-//                it.onDisconnect(NetUtils.DefaultUUID)
-//            }
-//        }
-
+        synchronized(listeners) {
+            listeners.forEach {
+                it.onDisconnect(NetUtils.DefaultUUID)
+            }
+        }
         connected = false
     }
 
-    /**
-     * Notifies the server that the client is disconnecting and triggers the disconnection process.
-     *
-     * @param id The ID of the connection to disconnect.
-     */
-    override fun disconnected(id: Connection) {
-        // notify the server that we're disconnecting
-//        send(new<DisconnectPacket> {
-//            this.uuid = this@Client.uuid
-//        }, id)
-//        logger.info { "Sent client disconnection packet" }
-//        synchronized(listeners) {
-//            listeners.forEach {
-//                it.onDisconnect(id.uuid)
-//            }
-//        }
-    }
+
     /**
      * Terminates the client connection.
      */
     override fun terminate() {
         runningRef.set(false)
-        try {
-////            disconnected(connection)
-//
-//            // notify the server that we're disconnecting
-//            send(new<DisconnectPacket> {
-//                this.uuid = this@Client.uuid
-//            })
-//            logger.info { "Sent client disconnection packet" }
-//            synchronized(listeners) {
-//                listeners.forEach {
-//                    it.onDisconnect(uuid)
-//                }
-//            }
-
-        } catch (e: Exception) {
-            //I don't give a fuck xD
-        }
     }
 
 

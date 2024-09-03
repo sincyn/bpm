@@ -20,15 +20,15 @@ edges:
   result:
     description: 'The result of the addition'
     direction: output
-    type: vec3
+    type: vec3i or vec3f
 
 source: |
-    local vector = {
-        x = 0,
-        y = 0,
-        z = 0
-    }
-    vector.x = value.vector_a.x + value.vector_b.x
-    vector.y = value.vector_a.y + value.vector_b.y
-    vector.z = value.vector_a.z + value.vector_b.z
-    return vector
+  local vector = {
+      x = 0,
+      y = 0,
+      z = 0
+  }
+  vector.x = vector_a.x + vector_b.x
+  vector.y = vector_a.y + vector_b.y
+  vector.z = vector_a.z + vector_b.z
+  return vector

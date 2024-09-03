@@ -11,6 +11,7 @@ import noderspace.common.type.NodeLibrary
 import noderspace.common.workspace.graph.*
 import org.joml.Vector2f
 import org.joml.Vector4f
+import party.iroiro.luajava.Lua
 import java.nio.file.Path
 import java.util.UUID
 

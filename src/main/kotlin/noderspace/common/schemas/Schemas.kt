@@ -22,10 +22,12 @@ class Schemas(private val path: Path, private val side: Endpoint.Side) : Listene
     val library: NodeLibrary = NodeLibrary()
     private val logger = KotlinLogging.logger { }
 
-
     override fun onInstall() {
         if (side == Endpoint.Side.CLIENT) return
         //This is still ran on the client, the client has two instances of schemas (one for server and one for client as singleplayer still internally uses a server)
+
+
+
 
         //Load the node library, todo: move this to a config file
         library.readFrom(path)

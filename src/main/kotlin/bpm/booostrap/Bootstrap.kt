@@ -142,8 +142,6 @@ class Bootstrap(
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogin(event: ClientPlayerNetworkEvent.LoggingIn) {
         LOGGER.log(Level.INFO, "Client player logging in: ${event.player?.name}")
-        // This runs on the game thread
-        //The local players uuiid
         ClientRuntime.connect()
     }
 
@@ -151,8 +149,7 @@ class Bootstrap(
 
     @OnlyIn(Dist.CLIENT)
     private fun onClientPlayerLogout(event: ClientPlayerNetworkEvent.LoggingOut) {
-//        LOGGER.log(Level.INFO, "Client player logging out: ${event.player?.name}")
-//        ClientRuntime.disconnect()
+        ClientRuntime.disconnect()
     }
 
 

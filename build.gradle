@@ -70,6 +70,8 @@ runs {
     client {
         // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
         systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        // set the ram to 8GB
+        jvmArguments.add('-Xmx8G')
     }
 
     server {

@@ -184,11 +184,10 @@ object ClientRuntime : Listener {
     }
 
 
-    fun connect() {
-        if (!client.connected) {
-            client.connect()
-        }
-    }
+    fun connect() = client.connect()
+
+    fun disconnect() = client.disconnect()
+
 
 
 
@@ -240,11 +239,7 @@ object ClientRuntime : Listener {
         }
 
         is DisconnectPacket -> {
-            if (packet.uuid == clientUid) {
-                client.disconnect()
-            } else {
-                logger.warn { "Received disconnect packet with invalid UUID" }
-            }
+            //TODO: update local client representation of the users in the workspace
         }
 
         is WorkspaceLoad -> {
