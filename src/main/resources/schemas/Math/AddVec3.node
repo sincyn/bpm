@@ -1,0 +1,34 @@
+description: "Adds two vectors together"
+group: Math
+name: Add Vec3
+extends: Base/Node
+
+theme:
+  color: '#167933'
+  width: 140
+  height: 60
+  icon: 0xe55f
+edges:
+  vector_a:
+    description: 'The first vector to add'
+    direction: input
+    type: vec3i or vec3f
+  vector_b:
+    description: 'The second value to add'
+    direction: input
+    type: vec3i or vec3f
+  result:
+    description: 'The result of the addition'
+    direction: output
+    type: vec3
+
+source: |
+    local vector = {
+        x = 0,
+        y = 0,
+        z = 0
+    }
+    vector.x = value.vector_a.x + value.vector_b.x
+    vector.y = value.vector_a.y + value.vector_b.y
+    vector.z = value.vector_a.z + value.vector_b.z
+    return vector

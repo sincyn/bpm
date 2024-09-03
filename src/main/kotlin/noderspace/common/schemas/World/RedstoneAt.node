@@ -21,7 +21,4 @@ edges:
     type: number
 
 source: |
-  ${SETUP.{
-      variables.__World__ = java.import('noderspace.server.environment.lua.World')
-  }}
-  return variables.__World__:signalAt(value.x, value.y, value.z)
+  return World:signalAt(value.x, value.y, value.z)

@@ -59,7 +59,7 @@ class PipeNetwork {
             val currentPipe = availablePipes[current] ?: continue
             connectedPipes[current] = currentPipe
 
-            for (direction in Direction.values()) {
+            for (direction in Direction.entries) {
                 val neighborPos = current.relative(direction)
                 if (neighborPos in availablePipes && neighborPos !in connectedPipes) {
                     queue.add(neighborPos)

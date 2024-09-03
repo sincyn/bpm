@@ -18,12 +18,9 @@ edges:
     direction: output
     type: exec
 source: |
-  ${SETUP.{
-     variables.__World__ = java.import('noderspace.server.environment.lua.World')
-  }}
   local locationLambda = ${LAMBDA.location}
   local loc = locationLambda()
-  local power = variables.__World__:signalAt(loc.x, loc.y, loc.z)
+  local power = World:signalAt(loc.x, loc.y, loc.z)
   if power > 0 then
       ${EXEC.exec_out}
   end

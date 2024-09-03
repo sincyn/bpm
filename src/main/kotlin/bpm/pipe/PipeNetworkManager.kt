@@ -52,6 +52,10 @@ object PipeNetworkManager {
         return mappedControllers[uuid]?.firstOrNull()?.blockPos
     }
 
+    fun getControllerPositions(uuid: UUID): List<BlockPos> {
+        return mappedControllers[uuid]?.map { it.blockPos } ?: emptyList()
+    }
+
     fun getControllerPositions(): List<BlockPos> {
         return getControllers().map { it.blockPos }
     }

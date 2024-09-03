@@ -35,7 +35,7 @@ edges:
   velocity:
     description: 'The velocity of the particle'
     direction: input
-    type: vec3
+    type: vec3f or vec3i
   spread:
     description: 'The spread of the particle'
     direction: input
@@ -49,7 +49,6 @@ edges:
     type: exec
 
 source: |
-  local _World = java.import('noderspace.server.environment.lua.World')
   local x = location.x + 0.0
   local y = location.y + 0.0
   local z = location.z + 0.0
@@ -61,5 +60,5 @@ source: |
   local velY = vel.y + 0.0
   local velZ = vel.z + 0.0
   local spread = spread or 0.0
-  _World:spawnParticle(x, y, z, count, velX, velY, velZ, spread, type)
+  World:spawnParticle(x, y, z, count, velX, velY, velZ, spread, type)
   ${EXEC.exec_out}

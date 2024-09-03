@@ -4,7 +4,10 @@ import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.core.particles.ParticleOptions
 import net.minecraft.core.particles.ParticleTypes
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.server.MinecraftServer
+import net.minecraft.sounds.SoundSource
+import net.minecraft.world.entity.EntityType
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.server.ServerLifecycleHooks
 
@@ -27,6 +30,36 @@ object World : LuaBuiltin {
         }
         val signal = state.getSignal(overworld, BlockPos(x, y, z), Direction.DOWN)
         return signal
+    }
+
+    @JvmStatic
+    fun spawnLightningAt(x: Float, y: Float, z: Float) {
+        val lightningBolt = EntityType.LIGHTNING_BOLT.create(overworld)
+        if (lightningBolt != null) {
+            lightningBolt.moveTo(x.toDouble(), y.toDouble(), z.toDouble())
+            overworld.addFreshEntity(lightningBolt)
+        }
+    }
+
+    @JvmStatic
+    fun playSoundAt(x: Float, y: Float, z: Float, soundName: String, volume: Float, pitch: Float) {
+        val sound = getSoundByName(soundName)
+        overworld.playSound(
+            null, // No specific player, play for all
+            x.toDouble(),
+            y.toDouble(),
+            z.toDouble(),
+            sound,
+            SoundSource.BLOCKS,
+            volume,
+            pitch
+        )
+    }
+
+    private fun getSoundByName(name: String): net.minecraft.sounds.SoundEvent {
+        val registry = BuiltInRegistries.SOUND_EVENT
+        val event = registry.get(net.minecraft.resources.ResourceLocation.tryParse(name))
+        return event ?: net.minecraft.sounds.SoundEvents.AMBIENT_CAVE.value()
     }
 
     @JvmStatic
