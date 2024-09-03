@@ -1,5 +1,7 @@
 package noderspace.common.vm
 
+import bpm.Bpm
+import bpm.lua.LuaBuiltin
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
@@ -297,12 +299,25 @@ object ComplexLuaTranspiler {
             val codeBuilder = StringBuilder()
             generateWorkspaceAccessor(workspace, codeBuilder)
             generateVariableInitializations(ir, codeBuilder)
+            generateBuiltIns(codeBuilder)
             generateSetupFunction(ir, codeBuilder)
             generateFunctionDeclarations(ir, codeBuilder)
             generateFunctionImplementations(ir, codeBuilder)
             generateMainExecution(ir, codeBuilder)
 
             return codeBuilder.toString()
+        }
+
+        private fun generateBuiltIns(codeBuilder: StringBuilder) {
+            val bootstrap = Bpm.bootstrap
+            val builtIns = bootstrap.getBuiltIns()
+            codeBuilder.append("-- Built-in Classes\n")
+            builtIns.forEach { builtIn -> generateBuiltIn(builtIn, codeBuilder) }
+        }
+
+        private fun generateBuiltIn(builtIn: LuaBuiltin, codeBuilder: StringBuilder) {
+            val classPath = builtIn.javaClass.name
+            codeBuilder.append("local ${builtIn.name} = java.import('$classPath')\n")
         }
 
         private fun generateWorkspaceAccessor(workspace: Workspace, codeBuilder: StringBuilder) {

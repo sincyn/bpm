@@ -1,4 +1,4 @@
-package noderspace.server.environment.lua
+package bpm.lua
 
 import noderspace.common.network.Network.new
 import noderspace.common.network.Server

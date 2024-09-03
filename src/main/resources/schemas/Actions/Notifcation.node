@@ -24,8 +24,5 @@ edges:
     type: exec
 
 source: |
-  ${SETUP.{
-      variables.__Notify__ = java.import('noderspace.server.environment.lua.Notify')
-  }}
-  variables.__Notify__:info(value)
+  Notify:info(value)
   ${EXEC.exec_out}

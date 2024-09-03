@@ -1,4 +1,4 @@
-package noderspace.server.environment.lua
+package bpm.lua
 
 interface LuaBuiltin {
     val name: String

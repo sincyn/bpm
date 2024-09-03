@@ -29,7 +29,7 @@ import noderspace.common.serial.Serial
 import noderspace.common.serial.Serialize
 import noderspace.common.utils.*
 import noderspace.server.environment.ServerRuntime
-import noderspace.server.environment.lua.LuaBuiltin
+import bpm.lua.LuaBuiltin
 import org.apache.logging.log4j.Level
 import thedarkcolour.kotlinforforge.neoforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
@@ -56,6 +56,8 @@ class Bootstrap(
         collectRegistries()
         collectPackets()
         collectSerializable()
+        collectLuaBuiltIns()
+        logger.info("Bootstrapped ${registriesList.size} registries\n, ${packetsList.size} packets, ${serializableList.size} serializable, and ${builtIns.size} builtins")
         return this
     }
     //Registers all of the serializerables and packet handlers
@@ -166,6 +168,10 @@ class Bootstrap(
             .install<Overlay2D>()
     }
 
+    fun getBuiltIns(): List<LuaBuiltin> {
+        return builtIns
+    }
+
     //Copies the schemas from the jar to the game directory
     private fun copySchemas() {
         val gameDir = FMLPaths.GAMEDIR.get()
@@ -220,10 +226,11 @@ class Bootstrap(
         throw IllegalStateException("Class $clazz is not a ModRegistry")
     }
 
-    private fun collectLuaBuildIng() {
+    private fun collectLuaBuiltIns() {
         ourResults.classesImplementing<LuaBuiltin>().forEach {
             builtIns.add(it.objectInstance ?: it.createInstance())
         }
+        logger.info("Collected builtins:\n\t(\n\t\t${builtIns.map { it.simpleClassName }.joinToString { "\n" }}\n\t) ")
     }
 
     private fun collectRegistries() {

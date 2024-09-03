@@ -1,4 +1,4 @@
-package noderspace.server.environment.lua
+package bpm.lua
 
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction

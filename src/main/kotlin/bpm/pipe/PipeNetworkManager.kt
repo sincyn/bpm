@@ -7,7 +7,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.level.Level
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.property.Property
 import noderspace.server.environment.ServerRuntime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -18,7 +17,7 @@ object PipeNetworkManager {
     private val pipeTypeCache = ConcurrentHashMap<Class<out BasePipeBlock>, MutableSet<BlockPos>>()
     private val logger = KotlinLogging.logger {}
     //Maps the workspace uuid to the controller tile entity
-    private val mappedControllers = ConcurrentHashMap<UUID, EnderControllerTileEntity>()
+    private val mappedControllers = ConcurrentHashMap<UUID, MutableSet<EnderControllerTileEntity>>()
     fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         val connectedNetworks = findConnectedNetworks(level, pos)
         when {
@@ -37,22 +36,30 @@ object PipeNetworkManager {
     private fun onControllerRemoved(entity: EnderControllerTileEntity) {
         val uuid = entity.getUUID()
         //We should locate the workspace in the environment, and remove any event functions that are associated with the controller
-        mappedControllers.remove(uuid)
+        mappedControllers[uuid]?.remove(entity)
         ServerRuntime.closeWorkspace(uuid)
     }
 
     fun getController(uuid: UUID): EnderControllerTileEntity? {
-        return mappedControllers[uuid]
+        return mappedControllers[uuid]?.firstOrNull()
     }
 
-    fun getControllerPos(uuid: UUID): BlockPos? {
-        return mappedControllers[uuid]?.blockPos
+    fun getControllers(): List<EnderControllerTileEntity> {
+        return mappedControllers.values.flatten()
+    }
+
+    fun getControllerPosition(uuid: UUID): BlockPos? {
+        return mappedControllers[uuid]?.firstOrNull()?.blockPos
+    }
+
+    fun getControllerPositions(): List<BlockPos> {
+        return getControllers().map { it.blockPos }
     }
 
 
     private fun onControllerPlaced(entity: EnderControllerTileEntity) {
         val uuid = entity.getUUID()
-        mappedControllers[uuid] = entity
+        mappedControllers[uuid] = mappedControllers.getOrPut(uuid) { mutableSetOf() }.apply { add(entity) }
         ServerRuntime.recompileWorkspace(uuid)
     }
 
