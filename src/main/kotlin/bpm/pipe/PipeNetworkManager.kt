@@ -47,6 +47,8 @@ object PipeNetworkManager : Listener {
     fun queueNetworkUpdate(level: Level, pos: BlockPos) {
         val block = level.getBlockState(pos).block
         if(block !is BasePipeBlock) {
+            //We should A), see if the block is air, if so, we should remove it from the network
+            //B) if it's not air, we should log a warning
             logger.warn { "Tried to queue network update for non-pipe block at $pos" }
             return
         }
@@ -77,6 +79,7 @@ object PipeNetworkManager : Listener {
 
         cleanupNetworks()
     }
+
     private fun updateNetworkAt(level: Level, pos: BlockPos) {
         val blockState = level.getBlockState(pos)
         val block = blockState.block
@@ -98,7 +101,8 @@ object PipeNetworkManager : Listener {
             if (entity != null) {
                 onControllerPlaced(entity)
             } else {
-                logger.warn { "Couldn't add controller at $pos, no tile entity found" }
+                logger.warn { "Couldn't add controller at $pos, no tile entity found... queing it up" }
+                queueNetworkUpdate(level, pos)
             }
         }
     }

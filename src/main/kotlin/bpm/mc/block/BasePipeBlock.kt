@@ -33,17 +33,6 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         builder.add(*ALL_STATES.toTypedArray())
     }
 
-    override fun neighborChanged(
-        state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
-    ) {
-        if (!level.isClientSide) {
-            val newState = getUpdatedState(level, pos, state)
-            if (newState != state) {
-                level.setBlock(pos, newState, 3)
-                notifyNeighbors(level, pos)
-            }
-        }
-    }
 
     override fun getStateForPlacement(p_49820_: BlockPlaceContext): BlockState? {
         return getUpdatedState(p_49820_.level, p_49820_.clickedPos, defaultBlockState())
@@ -103,26 +92,26 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
         }
     }
 
-    open fun onPipeAdded(level: Level, pos: BlockPos) {
-        PipeNetworkManager.onPipeAdded(this, level, pos)
-    }
-
-    open fun onPipeRemoved(level: Level, pos: BlockPos) {
-        PipeNetworkManager.onPipeRemoved(this, level, pos)
-    }
-
-
-    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
-        super.onPlace(state, level, pos, oldState, isMoving)
-        if (!level.isClientSide) {
-            PipeNetworkManager.onPipeAdded(this, level, pos)
-        }
-    }
-
-    override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
-        if (!level.isClientSide && state.block != newState.block) {
-            PipeNetworkManager.onPipeRemoved(this, level, pos)
-        }
-        super.onRemove(state, level, pos, newState, isMoving)
-    }
+//    open fun onPipeAdded(level: Level, pos: BlockPos) {
+//        PipeNetworkManager.onPipeAdded(this, level, pos)
+//    }
+//
+//    open fun onPipeRemoved(level: Level, pos: BlockPos) {
+//        PipeNetworkManager.onPipeRemoved(this, level, pos)
+//    }
+//
+//
+//    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
+//        super.onPlace(state, level, pos, oldState, isMoving)
+//        if (!level.isClientSide) {
+//            PipeNetworkManager.onPipeAdded(this, level, pos)
+//        }
+//    }
+//
+//    override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
+//        if (!level.isClientSide && state.block != newState.block) {
+//            PipeNetworkManager.onPipeRemoved(this, level, pos)
+//        }
+//        super.onRemove(state, level, pos, newState, isMoving)
+//    }
 }

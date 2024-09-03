@@ -1,14 +1,12 @@
 package bpm.mc.block
 
+import bpm.mc.multiblock.GlobalMultiBlockRegistry
+import bpm.mc.multiblock.pipe.PipeBaseBlock
 import bpm.mc.visual.NodeEditorGui
-import bpm.pipe.PipeNetworkManager
-import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
-import net.minecraft.core.component.DataComponents.CUSTOM_NAME
-import net.minecraft.network.chat.Component
+import net.minecraft.core.Direction
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.ItemInteractionResult
-import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.BlockPlaceContext
@@ -25,7 +23,7 @@ import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
 
 
-class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), EntityBlock {
+class EnderControllerBlock(properties: Properties) : PipeBaseBlock(properties), EntityBlock {
 
     private val shape = makeShape()
 
@@ -48,6 +46,35 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     }
 
 
+    override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
+        if (!level.isClientSide && state.block != newState.block) {
+            val worldManager = GlobalMultiBlockRegistry.getWorldManager(level)
+            worldManager.onBlockChanged(pos)
+
+            // Remove the block entity
+            level.removeBlockEntity(pos)
+
+            // Update neighboring blocks
+            for (direction in Direction.entries) {
+                level.updateNeighborsAt(pos.relative(direction), this)
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving)
+    }
+
+    override fun neighborChanged(
+        state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
+    ) {
+        if (!level.isClientSide) {
+            val newState = getUpdatedState(level, pos, state)
+            if (newState != state) {
+                level.setBlock(pos, newState, 3)
+                notifyNeighbors(level, pos)
+            }
+        }
+    }
+
+
     override fun getCollisionShape(
         p_60572_: BlockState, p_60573_: BlockGetter, p_60574_: BlockPos, p_60575_: CollisionContext
     ): VoxelShape {
@@ -61,69 +88,66 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     }
 
     override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
-        val level = context.level
-        val pos = context.clickedPos
-
-        return super.getStateForPlacement(context)
-    }
-
-    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
-        if (!level.isClientSide) {
-            if (PipeNetworkManager.hasControllerInNetwork(level, pos)) {
-                dropController(level, pos)
-                level.removeBlock(pos, false)
-                return
-            }
-
-            PipeNetworkManager.onPipeAdded(this, level, pos)
-            // Remove the direct call to updateNetwork
+        if (!canConnectToAny(context.level, context.clickedPos)) {
+            return null
         }
+        return getUpdatedState(context.level, context.clickedPos, defaultBlockState())
+    }
+
+    override fun canConnectTo(state: BlockState): Boolean {
+        //Only allow connections to other pipes
+        return state.block is PipeBaseBlock && state.block != this
     }
 
 
-    override fun neighborChanged(
-        state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
-    ) {
-        super.neighborChanged(state, level, pos, block, fromPos, isMoving)
-        if (!level.isClientSide) {
-            PipeNetworkManager.queueNetworkUpdate(level, pos)
-        }
-    }
+    private fun canConnectToAny(level: Level, pos: BlockPos): Boolean {
+        var adjacentPipesWithoutController = 0
 
-    override fun canBeReplaced(state: BlockState, context: BlockPlaceContext): Boolean {
-        return false
-    }
+        for (direction in Direction.entries) {
+            val neighborPos = pos.relative(direction)
+            val neighborState = level.getBlockState(neighborPos)
+            val neighborBlock = neighborState.block
 
-
-    private fun dropController(level: Level, pos: BlockPos) {
-        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
-        if (blockEntity != null && !level.isClientSide) {
-            val stack = ItemStack(this)
-            val serverLevel = level as net.minecraft.server.level.ServerLevel
-            val registryAccess = serverLevel.registryAccess()
-            stack.set(
-                CUSTOM_NAME,
-                Component.literal("Ender Controller").withStyle(ChatFormatting.DARK_PURPLE)
-                    .withStyle(ChatFormatting.BOLD)
-            )
-            blockEntity.saveToItem(stack, registryAccess)
-            ItemEntity(level, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, stack).apply {
-                setDefaultPickUpDelay()
-                level.addFreshEntity(this)
+            when {
+                neighborBlock is EnderControllerBlock -> {
+                    // Disallow connections to other controllers
+                    return false
+                }
+                neighborBlock is PipeBaseBlock -> {
+                    if (!networkHasController(level, neighborPos)) {
+                        adjacentPipesWithoutController++
+                    } else {
+                        // Disallow connection to pipes that are already part of a network with a controller
+                        return false
+                    }
+                }
             }
         }
+
+        // Allow placement only if there's at least one adjacent pipe without a controller
+        return adjacentPipesWithoutController > 0
     }
 
-    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
-        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
-        val block = state.block
-        if (blockEntity != null && !level.isClientSide && block is EnderControllerBlock) {
-            PipeNetworkManager.onPipeRemoved(block, level, pos)
-            dropController(level, pos)
-            // Remove the direct call to updateNetwork
-        }
-        return super.playerWillDestroy(level, pos, state, player)
+
+
+
+    private fun canConnectToBlock(level: Level, pos: BlockPos, direction: Direction): Boolean {
+        val relativePos = pos.relative(direction)
+        val block = level.getBlockState(relativePos).block
+        return block is PipeBaseBlock && block != this && !networkHasController(level, relativePos)
     }
+
+
+//    override fun playerWillDestroy(level: Level, pos: BlockPos, state: BlockState, player: Player): BlockState {
+//        val blockEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+//        val block = state.block
+//        if (blockEntity != null && !level.isClientSide && block is EnderControllerBlock) {
+//            PipeNetworkManager.onPipeRemoved(block, level, pos)
+//            dropController(level, pos)
+//            // Remove the direct call to updateNetwork
+//        }
+//        return super.playerWillDestroy(level, pos, state, player)
+//    }
 
 
     fun makeShape(): VoxelShape {

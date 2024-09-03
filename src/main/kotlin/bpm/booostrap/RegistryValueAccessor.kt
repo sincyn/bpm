@@ -1,5 +1,8 @@
 package bpm.booostrap
 
+import bpm.mc.multiblock.GlobalMultiBlockRegistry
+import bpm.mc.multiblock.MultiBlockStructure
+import net.minecraft.core.BlockPos
 import net.neoforged.neoforge.registries.DeferredHolder
 import kotlin.reflect.KProperty
 

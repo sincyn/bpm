@@ -1,7 +1,10 @@
 package bpm.mc.block
 
+import bpm.mc.multiblock.GlobalMultiBlockRegistry
+import bpm.mc.multiblock.pipe.PipeBaseBlock
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.state.BlockState
@@ -10,7 +13,7 @@ import net.minecraft.world.phys.shapes.CollisionContext
 import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
 
-class EnderPipeBlock(properties: Properties) : BasePipeBlock(properties) {
+class EnderPipeBlock(properties: Properties) : PipeBaseBlock(properties) {
 
     private val visualShapeCache = mutableMapOf<Int, VoxelShape>()
     private val collisionShapeCache = mutableMapOf<Int, VoxelShape>()
@@ -37,7 +40,12 @@ class EnderPipeBlock(properties: Properties) : BasePipeBlock(properties) {
         return getCachedVisualShape(state)
     }
 
-    override fun getCollisionShape(state: BlockState, level: BlockGetter, pos: BlockPos, context: CollisionContext): VoxelShape {
+    override fun getCollisionShape(
+        state: BlockState,
+        level: BlockGetter,
+        pos: BlockPos,
+        context: CollisionContext
+    ): VoxelShape {
         return getCachedCollisionShape(state)
     }
 
@@ -60,6 +68,59 @@ class EnderPipeBlock(properties: Properties) : BasePipeBlock(properties) {
         }
         return key
     }
+    override fun getStateForPlacement(context: BlockPlaceContext): BlockState? {
+        if (!canConnectToAny(context.level, context.clickedPos)) {
+            return null
+        }
+        return getUpdatedState(context.level, context.clickedPos, defaultBlockState())
+    }
+
+
+    private fun canConnectToAny(level: Level, pos: BlockPos): Boolean {
+        var adjacentControllers = 0
+        var adjacentNetworksWithController = 0
+        var adjacentPipes = 0
+
+        for (direction in Direction.entries) {
+            val neighborPos = pos.relative(direction)
+            val neighborState = level.getBlockState(neighborPos)
+            val neighborBlock = neighborState.block
+
+            when {
+                neighborBlock is EnderControllerBlock -> {
+                    adjacentControllers++
+                }
+                neighborBlock is PipeBaseBlock -> {
+                    adjacentPipes++
+                    if (networkHasController(level, neighborPos)) {
+                        adjacentNetworksWithController++
+                    }
+                }
+            }
+        }
+
+        // Disallow placement if there are multiple adjacent controllers
+        if (adjacentControllers > 1) {
+            return false
+        }
+
+        // Disallow placement if there are multiple adjacent networks with controllers
+        if (adjacentNetworksWithController > 1) {
+            return false
+        }
+
+        // Disallow placement if there's an adjacent network with a controller and an adjacent controller
+        if (adjacentNetworksWithController == 1 && adjacentControllers == 1) {
+            return false
+        }
+
+        // Allow placement if there are adjacent pipes or if it's being placed in air
+        return adjacentPipes > 0 || adjacentPipes == 0
+    }
+
+
+
+
 
     private fun createVisualShapeForState(state: BlockState): VoxelShape {
         var shape = CENTER_SHAPE
@@ -83,8 +144,4 @@ class EnderPipeBlock(properties: Properties) : BasePipeBlock(properties) {
         return shape
     }
 
-    override fun canConnectTo(level: Level, pos: BlockPos, direction: Direction): Boolean {
-        val neighborState = level.getBlockState(pos.relative(direction))
-        return neighborState.block is BasePipeBlock
-    }
 }
