@@ -1,5 +1,6 @@
-package noderspace.common.managers
+package noderspace.common.schemas
 
+import bpm.Bpm
 import noderspace.common.logging.KotlinLogging
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
@@ -8,19 +9,24 @@ import noderspace.common.type.NodeLibrary
 import noderspace.common.workspace.packets.NodeLibraryReloadRequest
 import noderspace.common.workspace.packets.NodeLibraryRequest
 import noderspace.common.workspace.packets.NodeLibraryResponse
+import java.io.File
+import java.io.IOException
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.*
 
 class Schemas(private val path: Path, private val side: Endpoint.Side) : Listener {
 
     val library: NodeLibrary = NodeLibrary()
     private val logger = KotlinLogging.logger { }
-    //    private val path = Path.of("C:\\Users\\jraynor\\Documents\\nodes\\graph-common\\src\\main\\resources\\assets\\schemas")
-//    private val path = Path.of("/home/randy/nodeer/schemas")
 
 
     override fun onInstall() {
         if (side == Endpoint.Side.CLIENT) return
+        //This is still ran on the client, the client has two instances of schemas (one for server and one for client as singleplayer still internally uses a server)
+
         //Load the node library, todo: move this to a config file
         library.readFrom(path)
         val types = library.collect()

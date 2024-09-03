@@ -1,7 +1,6 @@
 package noderspace.common.vm
 
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
 import noderspace.common.workspace.Workspace
@@ -9,6 +8,7 @@ import noderspace.common.workspace.graph.Edge
 import noderspace.common.workspace.graph.Node
 import noderspace.common.property.Property
 import noderspace.common.property.cast
+import noderspace.common.schemas.Schemas
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -173,7 +173,7 @@ object ComplexLuaTranspiler {
             // Process variables
             workspace.graph.variables.forEach { (name, property) ->
                 ir.variables[name] = when (property) {
-                    is Property.String -> IRValue.String(property.get())
+                    is Property.String -> IRValue.String(multiLineString(property.get()))
                     is Property.Int -> IRValue.Int(property.get())
                     is Property.Float -> IRValue.Float(property.get())
                     is Property.Boolean -> IRValue.Boolean(property.get())
@@ -192,6 +192,22 @@ object ComplexLuaTranspiler {
             }
 
             return ir
+        }
+
+        private fun multiLineString(input: String): String {
+            val lines = input.split("\n")
+            return if (lines.size > 1) {
+                val formattedLines = lines.mapIndexed { index, line ->
+                    if (index == lines.lastIndex) {
+                        "\"$line\""
+                    } else {
+                        "\"$line\\n\" .."
+                    }
+                }
+                formattedLines.joinToString("\n    ")
+            } else {
+                "\"$input\""
+            }
         }
 
 
@@ -477,7 +493,8 @@ object ComplexLuaTranspiler {
 
         private fun generateValue(value: IRValue): String {
             return when (value) {
-                is IRValue.String -> "\"${value.value}\""
+                //No need to wrap in braces because it's handled by the multiLineString function
+                is IRValue.String -> value.value
                 is IRValue.Int -> value.value.toString()
                 is IRValue.Float -> value.value.toString()
                 is IRValue.Boolean -> value.value.toString()

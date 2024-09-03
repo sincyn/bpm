@@ -1,4 +1,4 @@
-package noderspace.server.environment
+package noderspace.server.environment.lua
 
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
@@ -7,7 +7,6 @@ import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.MinecraftServer
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.server.ServerLifecycleHooks
-import noderspace.common.network.Endpoint
 
 object World {
 

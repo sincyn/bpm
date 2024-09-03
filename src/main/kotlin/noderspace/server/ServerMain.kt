@@ -3,7 +3,7 @@ package noderspace.server
 import noderspace.common.logging.KotlinLogging
 import noderspace.server.environment.ServerRuntime
 import noderspace.common.network.Server
-import noderspace.common.managers.Schemas
+import noderspace.common.schemas.Schemas
 import java.nio.file.Path
 
 private val logger = KotlinLogging.logger {}

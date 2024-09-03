@@ -210,6 +210,10 @@ abstract class Endpoint<T : Endpoint<T>> {
      */
     inline fun <reified L : Listener> installed(crossinline listener: L.() -> Unit) = installed<L>().apply(listener)
 
+    inline fun <reified L : Listener, R> installed(crossinline listener: L.() -> R) = installed<L>().listener()
+
+    inline operator fun <reified L : Listener, R> get(crossinline listener: L.() -> R) = installed<L>().listener()
+
     /**
      * Listens for network events using the provided NetListener and returns the current Endpoint.
      *

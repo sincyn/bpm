@@ -9,13 +9,13 @@ import noderspace.client.runtime.ClientRuntime
 import noderspace.client.utils.toVec2f
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.use
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
 import noderspace.common.property.Property
 import noderspace.common.property.cast
 import noderspace.common.property.castOr
+import noderspace.common.schemas.Schemas
 import noderspace.common.utils.fmodf
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.WorkspaceSettings
@@ -29,7 +29,9 @@ import org.joml.Vector4i
 import java.util.*
 import kotlin.math.pow
 
-class CanvasWindow(var workspace: Workspace, private val runtime: ClientRuntime) : IRender {
+class CanvasWindow(private val runtime: ClientRuntime) : IRender {
+
+    val workspace: Workspace get() = runtime.workspace ?: error("Workspace not set")
 
 
     private val headerFamily get() = Fonts.getFamily("Inter")["Bold"]

@@ -298,8 +298,7 @@ class Graph(
                 val ownerid = value.cast<PropertyMap>()["owner"].cast<Property.UUID>()
                 val owner = graph.getNode(ownerid.get())
                 if (owner == null) {
-                    logger.warn { "Failed to find owner node with id ${ownerid.get()} for edge ${value.cast<PropertyMap>()["uid"].get()}" }
-//                    throw Exception("Failed to find owner node with id ${ownerid.get()} for edge ${value.cast<PropertyMap>()["uid"].get()}")
+                    //Not an error, it just hasn't been processed yet so lets queue it up
                     queuedEdges.getOrPut(ownerid.get()) { mutableListOf() }.add(Edge(value as PropertyMap))
                     continue
                 }

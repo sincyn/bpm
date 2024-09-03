@@ -1,6 +1,5 @@
-package noderspace.server.environment
+package noderspace.server.environment.lua
 
-import noderspace.common.network.Endpoint
 import noderspace.common.network.Network.new
 import noderspace.common.network.Server
 import noderspace.common.workspace.packets.NotifyMessage

@@ -11,7 +11,6 @@ import noderspace.client.utils.TextInputState
 import noderspace.client.utils.handleUniversalTextInput
 import noderspace.common.utils.FontAwesome
 import noderspace.client.utils.use
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
@@ -19,6 +18,7 @@ import noderspace.common.property.Property
 import noderspace.common.property.PropertyMap
 import noderspace.common.property.cast
 import noderspace.common.property.castOr
+import noderspace.common.schemas.Schemas
 import noderspace.common.type.NodeLibrary
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Link
@@ -55,7 +55,7 @@ class CustomActionMenu(private val workspace: Workspace, private val canvasCtx: 
     private val accentColor = ImColor.rgba(100, 65, 165, 255)
     private val hoverColor = ImColor.rgba(70, 70, 70, 255)
     private val folderColor = ImColor.rgba(60, 60, 60, 255)
-    private val nodeLibrary: NodeLibrary get() = listener<Schemas>(Endpoint.Side.CLIENT).library
+    private val nodeLibrary: NodeLibrary get() = Client.installed<Schemas>().library
     private val bodyFont get() = Fonts.getFamily("Inter")["Regular"][14]
     private val iconFont get() = Fonts.getFamily("Fa")["Bold"][18]
 

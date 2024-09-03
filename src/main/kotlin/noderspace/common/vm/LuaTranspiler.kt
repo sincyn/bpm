@@ -1,10 +1,10 @@
 package noderspace.common.vm
 
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.listener
 import noderspace.common.property.*
+import noderspace.common.schemas.Schemas
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Edge
 import noderspace.common.workspace.graph.Node

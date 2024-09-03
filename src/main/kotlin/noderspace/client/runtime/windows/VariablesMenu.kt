@@ -12,9 +12,9 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import noderspace.common.logging.KotlinLogging
 import noderspace.client.font.Fonts
+import noderspace.client.runtime.ClientRuntime
 import noderspace.client.runtime.windows.CanvasContext
 import noderspace.client.utils.*
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
 import noderspace.common.utils.FontAwesome
 import noderspace.common.network.Endpoint
@@ -30,8 +30,9 @@ import javax.xml.validation.Schema
 import kotlin.math.max
 import kotlin.math.min
 
-class VariablesMenu(private val workspace: Workspace, private val canvasContext: CanvasContext) {
+class VariablesMenu(private val canvasContext: CanvasContext) {
 
+    private val workspace get() = ClientRuntime.workspace ?: error("Workspace not available")
     // Logger
     private val logger = KotlinLogging.logger {}
 

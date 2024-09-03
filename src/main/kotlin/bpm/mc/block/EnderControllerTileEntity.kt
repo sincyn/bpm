@@ -21,7 +21,7 @@ import java.util.*
 import java.util.function.Supplier
 
 class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
-    BlockEntity(ModTiles.ENDER_CONTROLLER_TILE_ENTITY.get(), pos, state), IAttachmentHolder,
+    BlockEntity(ModTiles.ENDER_CONTROLLER_TILE_ENTITY, pos, state), IAttachmentHolder,
     HolderOwner<EnderControllerTileEntity> {
 
     val attachmentHolder = AttachmentHolder.AsField(this)

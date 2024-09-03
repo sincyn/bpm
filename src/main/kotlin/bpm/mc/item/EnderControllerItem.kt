@@ -9,7 +9,7 @@ import net.minecraft.world.item.*
 import noderspace.client.runtime.ClientRuntime
 import java.util.UUID
 
-class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER.get(), Item.Properties().rarity(Rarity.EPIC)) {
+class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER, Item.Properties().rarity(Rarity.EPIC)) {
 
     override fun appendHoverText(
         stack: ItemStack, context: TooltipContext, components: MutableList<Component>, flag: TooltipFlag

@@ -9,7 +9,7 @@ import noderspace.client.font.Fonts
 import noderspace.client.runtime.Platform
 import noderspace.client.runtime.ClientRuntime
 import noderspace.client.utils.use
-import noderspace.common.managers.Schemas
+import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
 import noderspace.common.packets.Packet
@@ -17,6 +17,7 @@ import noderspace.common.packets.internal.Time
 import noderspace.common.property.Property
 import noderspace.common.property.PropertyMap
 import noderspace.common.property.configured
+import noderspace.common.schemas.Schemas
 import noderspace.common.type.NodeLibrary
 import noderspace.common.type.NodeType
 import noderspace.common.utils.contains
@@ -78,14 +79,14 @@ class CanvasContext : Listener {
 
     internal val customActionMenu: CustomActionMenu by lazy { CustomActionMenu(workspace, this) }
     private var draggedSourceEdge: Pair<Node, Edge>? = null
-    internal val variablesMenu by lazy { VariablesMenu(workspace, this) }
+    internal val variablesMenu by lazy { VariablesMenu(this) }
     private val notificationManager = NotificationManager()
     /**
      * Represents the node library used in the application.
      *
      * @property nodeLibrary The node library instance.
      */
-    private val nodeLibrary: NodeLibrary = Endpoint.installed<Schemas>().library
+    private val nodeLibrary: NodeLibrary = Client.installed<Schemas>().library
 
     /**
      * A private constant representing the zoom level of the canvas.

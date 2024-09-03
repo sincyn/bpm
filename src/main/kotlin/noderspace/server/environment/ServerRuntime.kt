@@ -1,7 +1,6 @@
 package noderspace.server.environment
 
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
 import noderspace.common.network.Network.new
@@ -13,6 +12,7 @@ import noderspace.common.packets.internal.DisconnectPacket
 import noderspace.common.property.Property
 import noderspace.common.property.PropertyMap
 import noderspace.common.property.configured
+import noderspace.common.schemas.Schemas
 import noderspace.common.type.NodeType
 import noderspace.common.vm.EvalContext
 import noderspace.common.workspace.packets.WorkspaceCreateRequestPacket
@@ -52,7 +52,7 @@ object ServerRuntime : Listener {
      * keys are used to uniquely identify each workspace, while the corresponding values represent
      * the workspace instances.
      */
-    private val openedWorkspaces = mutableMapOf<UUID, UUID>()
+    private val openedWorkspaces = ConcurrentHashMap<UUID, UUID>()
 
     /**
      * Represents a collection of users.
@@ -60,43 +60,6 @@ object ServerRuntime : Listener {
      * @property users A mutable map of user IDs to User instances.
      */
     private val users = mutableMapOf<UUID, User>()
-
-
-    /**
-     * The `vm` variable is an instance of the `VM` class, which stands for "Virtual Machine".
-     * It is responsible for executing bytecode instructions that represent a sequence of operations.
-     * The `VM` class has the following properties and methods:
-     * - `stack`: A stack data structure that holds values during the execution of bytecode instructions.
-     * - `nativeFunctions`: A map of native functions that can be called within the bytecode instructions.
-     * - `bytecodeGenerator`: An instance of the `BytecodeGenerator` class, which is used to generate bytecode for different node types.
-     * - `registerNativeFunction(name: String, function: (Map<String, Any>, Map<String, Any>) -> Any?)`: A method for registering a native function with the `vm`.
-     * - `execute(nodeName: String, inputs: Map<String, Any>, properties: Map<String, Any>): Map<String, Any>`: A method that executes the bytecode instructions for a specific node
-     *  type, with given inputs and properties.
-     *
-     * The `vm` variable is created with the `VM` constructor taking a `NodeLibrary` as a parameter, where `Schemas.library` is passed as the argument.
-     *
-     * The `VM` class uses a set of hardcoded instructions, each identified by an opcode.
-     * Some of the opcodes include:
-     * - `PUSH_FLOAT`: Push a floating-point value onto the stack.
-     * - `PUSH_INT`: Push an integer value onto the stack.
-     * - `PUSH_STRING`: Push a string value onto the stack.
-     * - `PUSH_BOOL`: Push a boolean value onto the stack.
-     * - `PUSH_NULL`: Push a null value onto the stack.
-     * - `POP`: Pop the top value from the stack.
-     * - `ADD`: Pop two values from the stack, add them together, and push the result onto the stack.
-     * - `SUB`: Pop two values from the stack, subtract the second one from the first one, and push the result onto the stack.
-     * - `MUL`: Pop two values from the stack, multiply them together, and push the result onto the stack.
-     * - `DIV`: Pop two values from the stack, divide the first one by the second one, and push the result onto the stack.
-     * - `LOAD`: Load a value from a specific index in the stack and push it onto the stack.
-     * - `STORE`: Pop a value from the stack and store it at a specific index.
-     * - `GET_PROPERTY`: Get the value of a specific property from the `properties` map and push it onto the stack.
-     * - `SET_PROPERTY`: Pop a value from the stack and set it as the value of a specific property (does not modify the `properties` map).
-     * - `GET_INPUT`: Get the value of a specific input from the `inputs` map and push it onto the stack.
-     * - `SET_OUTPUT`: Pop a value from the stack and store it as the value of a specific output in the `outputs` map.
-     * - `CALL_NATIVE`: Call a native function by name, passing the `inputs` and `properties` maps as arguments, and push the result onto the stack.
-     * - `RET`: Return the `outputs` map and stop execution.
-     * - `HALT`: Stop execution.
-     */
 
 
     /**
@@ -366,13 +329,29 @@ object ServerRuntime : Listener {
     }
 
     private fun sendToUsersInWorkspace(workspaceId: UUID, packet: Packet) {
-        val usersNotInWorkspace = users.filter { (_, user) ->
-            user.workspaceUid != workspaceId
-        }.map { (_, user) ->
-            user
-        }.toMutableList().map { it.uid }.toTypedArray()
+        val workspace = workspaces[workspaceId]
+        if (workspace == null) {
+            logger.warn("Failed to find workspace")
+        }
 
-        server.sendToAll(packet, *usersNotInWorkspace)
+        val usersInWorkspace = openedWorkspaces.filter { (_, value) ->
+            value == workspaceId
+        }.keys.toTypedArray()
+
+        for (user in usersInWorkspace) {
+            server.send(packet, user)
+        }
+//
+//        val usersNotInWorkspace = users.filter { (_, user) ->
+//            user.workspaceUid != workspaceId
+//        }.map { (_, user) ->
+//            user
+//        }.toMutableList().map { it.uid }.toTypedArray()
+
+//        val users =
+
+
+//            server.sendToAll(packet, *usersNotInWorkspace)
     }
 
     private fun intToUnicodeEscaped(codePoint: Int): String {

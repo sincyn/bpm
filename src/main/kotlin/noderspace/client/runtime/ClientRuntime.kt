@@ -14,7 +14,6 @@ import noderspace.client.font.Fonts
 import noderspace.client.runtime.windows.CanvasContext
 import noderspace.client.runtime.windows.CanvasWindow
 import noderspace.common.logging.KotlinLogging
-import noderspace.common.managers.Schemas
 import noderspace.common.network.Client
 import noderspace.common.network.Endpoint
 import noderspace.common.network.Listener
@@ -23,6 +22,7 @@ import noderspace.common.network.Network.new
 import noderspace.common.packets.Packet
 import noderspace.common.packets.internal.ConnectResponsePacket
 import noderspace.common.packets.internal.DisconnectPacket
+import noderspace.common.schemas.Schemas
 import noderspace.common.utils.FontAwesome
 import noderspace.common.workspace.Workspace
 import noderspace.common.workspace.graph.Node
@@ -99,16 +99,6 @@ object ClientRuntime : Listener {
                 else logger.info { "Selected node: null" }
             })
         }
-
-    /**
-     * Sets up the client by installing the Heartbeart feature and installing the current instance.
-     *
-     * @param client The client to be set up.
-     */
-    private fun createClient(client: Client) = client.install(this)
-        .install<Schemas>(Path.of(""), Endpoint.Side.CLIENT)
-        .install<CanvasContext>().install<Overlay2D>()
-
 
     /**
      * initialize the runtime with the given window handle
@@ -200,12 +190,7 @@ object ClientRuntime : Listener {
         }
     }
 
-    fun disconnect() {
-        if (client.connected) {
-            canvasWindow?.close()
-            client.disconnect()
-        }
-    }
+
 
     /**
      * Handles the event when a connection is established.
@@ -266,14 +251,13 @@ object ClientRuntime : Listener {
             this.workspace = packet.workspace
 
             if (canvasWindow == null) {
-                canvasWindow = CanvasWindow(packet.workspace!!, this)
-                canvasWindow?.close()
-            } else {
-                canvasWindow?.workspace = packet.workspace!!
+                canvasWindow = CanvasWindow(this)
             }
+            canvasWindow?.close()
             canvasWindow?.open()
-            queuedWorkspaceLibrary = null // Clear any queued workspace library
             logger.info { "Received workspace load response: $packet" }
+
+            println(this.workspace?.graph?.variables)
         }
 
         is WorkspaceCreateResponsePacket -> {

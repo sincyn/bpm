@@ -31,7 +31,7 @@ object Serial {
      *
      * @param serializer the serializer to register
      */
-    fun <T : Any> register(type: Class<T>, serializer: Serialize<T>): Serial {
+    fun register(type: Class<*>, serializer: Serialize<*>): Serial {
         serializers[type] = serializer
         return this
     }

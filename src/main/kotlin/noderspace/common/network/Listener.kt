@@ -43,15 +43,13 @@ interface Listener {
      *
      * @param uuid The unique identifier (UUID) of the connected device.
      */
-    fun onConnect(uuid: UUID) =
-        if (NetUtils.isDefaultUUID(uuid)) logger.debug { "Connected to server" } else logger.debug { "User $uuid connected" }
-
+    fun onConnect(uuid: UUID) = Unit
     /**
      * Called when a user with the given UUID disconnects from the system.
      *
      * @param uuid The UUID of the user who disconnected.
      */
-    fun onDisconnect(uuid: UUID) = logger.debug { "User $uuid disconnected" }
+    fun onDisconnect(uuid: UUID) = Unit
 
     companion object {
 

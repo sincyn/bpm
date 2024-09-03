@@ -31,7 +31,9 @@ object FontDataLoader {
             it?.readBytes() ?: throw Exception("Could not load font data from $file")
         }
         return fontData.getOrPut(file) {
-            val fontData = if (glyphs == null) FontData(bytes) else FontData(bytes, shortArrayOf(glyphs.first, glyphs.second))
+            val fontData = if (glyphs == null) FontData(bytes) else FontData(
+                bytes, shortArrayOf(glyphs.first, glyphs.second)
+            )
             FontDataLoader.fontData[file] = fontData
             fontData.merge = merge
             fontData
@@ -44,8 +46,7 @@ object FontDataLoader {
         return fontData.getOrPut(file) {
             val bytes = Files.readAllBytes(path)
             val fontData = if (glyphs == null) FontData(bytes) else FontData(
-                bytes,
-                shortArrayOf(glyphs.first, glyphs.second)
+                bytes, shortArrayOf(glyphs.first, glyphs.second)
             )
             fontData.merge = merge
             FontDataLoader.fontData[file] = fontData

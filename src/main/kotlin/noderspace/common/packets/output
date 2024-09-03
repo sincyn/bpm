@@ -29,7 +29,7 @@ end
 -- Node: Notify (edf45a03-eeb0-4e0a-8da1-0eb0b67bf722)
 Notify_edf45a03_eeb0_4e0a_8da1_0eb0b67bf722 = function(value)
 
-local _Notify = java.import('noderspace.server.environment.Notify')
+local _Notify = java.import('noderspace.server.environment.lua.Notify')
 _Notify:info(value)
 
 end

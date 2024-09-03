@@ -66,15 +66,15 @@ object Client : Endpoint<Client>() {
 
     internal fun disconnect() {
         // notify the server that we're disconnecting
-        send(new<DisconnectPacket> {
-            this.uuid = this@Client.uuid
-        })
+//        send(new<DisconnectPacket> {
+//            this.uuid = this@Client.uuid
+//        })
         logger.info { "Sent client disconnection packet" }
-        synchronized(listeners) {
-            listeners.forEach {
-                it.onDisconnect(NetUtils.DefaultUUID)
-            }
-        }
+//        synchronized(listeners) {
+//            listeners.forEach {
+//                it.onDisconnect(NetUtils.DefaultUUID)
+//            }
+//        }
 
         connected = false
     }
@@ -86,15 +86,15 @@ object Client : Endpoint<Client>() {
      */
     override fun disconnected(id: Connection) {
         // notify the server that we're disconnecting
-        send(new<DisconnectPacket> {
-            this.uuid = this@Client.uuid
-        }, id)
-        logger.info { "Sent client disconnection packet" }
-        synchronized(listeners) {
-            listeners.forEach {
-                it.onDisconnect(id.uuid)
-            }
-        }
+//        send(new<DisconnectPacket> {
+//            this.uuid = this@Client.uuid
+//        }, id)
+//        logger.info { "Sent client disconnection packet" }
+//        synchronized(listeners) {
+//            listeners.forEach {
+//                it.onDisconnect(id.uuid)
+//            }
+//        }
     }
     /**
      * Terminates the client connection.
@@ -102,18 +102,18 @@ object Client : Endpoint<Client>() {
     override fun terminate() {
         runningRef.set(false)
         try {
-//            disconnected(connection)
-
-            // notify the server that we're disconnecting
-            send(new<DisconnectPacket> {
-                this.uuid = this@Client.uuid
-            })
-            logger.info { "Sent client disconnection packet" }
-            synchronized(listeners) {
-                listeners.forEach {
-                    it.onDisconnect(uuid)
-                }
-            }
+////            disconnected(connection)
+//
+//            // notify the server that we're disconnecting
+//            send(new<DisconnectPacket> {
+//                this.uuid = this@Client.uuid
+//            })
+//            logger.info { "Sent client disconnection packet" }
+//            synchronized(listeners) {
+//                listeners.forEach {
+//                    it.onDisconnect(uuid)
+//                }
+//            }
 
         } catch (e: Exception) {
             //I don't give a fuck xD
