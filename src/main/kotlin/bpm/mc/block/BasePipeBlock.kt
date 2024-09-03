@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.BooleanProperty
 import net.neoforged.neoforge.common.extensions.IBlockExtension
+import noderspace.server.environment.ServerRuntime
 
 open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExtension {
     companion object {
@@ -63,6 +64,13 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     ) {
         super.setPlacedBy(p_49847_, p_49848_, p_49849_, p_49850_, p_49851_)
         onPipeAdded(p_49847_, p_49848_)
+        if(this is EnderControllerBlock) {
+            val tile = p_49847_.getBlockEntity(p_49848_)
+            if(tile is EnderControllerTileEntity) {
+                //TODO: this should be calling some on added event instead
+                ServerRuntime.recompileWorkspace(tile.getUUID())
+            }
+        }
     }
 
     override fun playerDestroy(
@@ -75,6 +83,11 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     ) {
         super.playerDestroy(p_49827_, p_49828_, p_49829_, p_49830_, p_49831_, p_49832_)
         PipeNetworkManager.onPipeRemoved(this, p_49827_,p_49829_)
+
+            if(p_49831_ is EnderControllerTileEntity) {
+                //TODO: this should be calling some on removed event instead
+                ServerRuntime.recompileWorkspace(p_49831_.getUUID())
+            }
     }
 
     open fun canConnectTo(level: Level, pos: BlockPos, direction: Direction): Boolean {

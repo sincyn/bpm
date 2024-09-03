@@ -10,7 +10,6 @@ object Network : LuaBuiltin {
     @JvmStatic
     fun getControllerPosition(uuid: String): BlockPos? {
         val result = PipeNetworkManager.getControllerPosition(UUID.fromString(uuid))
-        println("getControllerPosition: $result")
         return result
     }
 
