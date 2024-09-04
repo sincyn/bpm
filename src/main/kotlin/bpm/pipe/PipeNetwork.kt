@@ -3,12 +3,10 @@ import bpm.mc.block.BasePipeBlock
 import bpm.mc.block.EnderControllerBlock
 import bpm.mc.block.EnderControllerTileEntity
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.level.Level
-import noderspace.common.logging.KotlinLogging
+import bpm.common.logging.KotlinLogging
 
 
 

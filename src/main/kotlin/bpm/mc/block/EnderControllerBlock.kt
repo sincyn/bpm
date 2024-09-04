@@ -1,13 +1,16 @@
 package bpm.mc.block
 
+import bpm.common.logging.KotlinLogging
 import bpm.mc.visual.NodeEditorGui
 import bpm.pipe.PipeNetworkManager
+import bpm.server.ServerRuntime
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.core.component.DataComponents.CUSTOM_NAME
 import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.ItemInteractionResult
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
@@ -23,11 +26,12 @@ import net.minecraft.world.phys.shapes.BooleanOp
 import net.minecraft.world.phys.shapes.CollisionContext
 import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
-import noderspace.server.environment.ServerRuntime
+import java.util.*
 
 
 class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), EntityBlock {
 
+    private val logger = KotlinLogging.logger { }
     private val shape = makeShape()
 
     override fun useItemOn(
@@ -39,15 +43,51 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         p_316595_: InteractionHand,
         p_316140_: BlockHitResult
     ): ItemInteractionResult {
-        if (level.isClientSide) {
+        if (!level.isClientSide) {
             val tileEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
-            val uuid = tileEntity?.getUUID()
-            println("Opening GUI for controller with UUID: $uuid")
-            NodeEditorGui.open(uuid ?: return ItemInteractionResult.FAIL)
+            if (tileEntity == null) {
+                logger.error { "Ender Controller Tile Entity is null" }
+                return ItemInteractionResult.sidedSuccess(level.isClientSide)
+            }
+            val uuid = tileEntity.getUUID()
+            val playerUUID = player.uuid
+            ServerRuntime.openWorkspace(uuid, playerUUID)
+            logger.debug { "Opening workspace for Ender Controller with uid $uuid" }
         }
+
         return ItemInteractionResult.sidedSuccess(level.isClientSide)
     }
 
+
+    override fun setPlacedBy(
+        level: Level,
+        p_49848_: BlockPos,
+        p_49849_: BlockState,
+        p_49850_: LivingEntity?,
+        p_49851_: ItemStack
+    ) {
+        super.setPlacedBy(level, p_49848_, p_49849_, p_49850_, p_49851_)
+        if (!level.isClientSide) {
+            (level.getBlockEntity(p_49848_) as? EnderControllerTileEntity)?.setUUID(UUID.randomUUID())
+            val tile = level.getBlockEntity(p_49848_)
+            if (tile is EnderControllerTileEntity) {
+//                val workspace = tile.workspace
+//                if (workspace == null) {
+//                    Initialize the uuid
+//                    tile.setUUID(UUID.randomUUID())
+//                    tile.setChanged()
+//                    logger.debug { "Created new workspace for Ender Controller with uid ${tile.getUUID()}" }
+//                } else{
+                ServerRuntime.recompileWorkspace(tile.getUUID())
+                val uuid = tile.getUUID()
+                val playerUUID = (p_49850_ as? Player)?.uuid
+                if (playerUUID != null) {
+                    ServerRuntime.openWorkspace(uuid, playerUUID)
+                }
+//                }
+            }
+        }
+    }
 
     override fun getCollisionShape(
         p_60572_: BlockState, p_60573_: BlockGetter, p_60574_: BlockPos, p_60575_: CollisionContext
@@ -69,8 +109,6 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         }
         return super.getStateForPlacement(context)
     }
-
-
 
 
     override fun neighborChanged(
@@ -105,7 +143,6 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
             }
         }
     }
-
 
 
     fun makeShape(): VoxelShape {
@@ -321,7 +358,9 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
     }
 
     override fun newBlockEntity(p_153215_: BlockPos, p_153216_: BlockState): BlockEntity? {
-        return EnderControllerTileEntity(p_153215_, p_153216_)
+        val controller = EnderControllerTileEntity(p_153215_, p_153216_)
+        val uuid = controller.getUUID()
+        return controller
     }
 
 

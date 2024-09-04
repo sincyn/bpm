@@ -1,10 +1,8 @@
 package bpm.booostrap
 
 import net.neoforged.bus.api.IEventBus
-import noderspace.common.network.Endpoint
-import noderspace.common.packets.Packet
-import noderspace.common.serial.Serial
-import noderspace.common.serial.Serialize
+import bpm.common.packets.Packet
+import bpm.common.serial.Serialize
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
 import kotlin.reflect.KClass
 

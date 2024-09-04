@@ -16,24 +16,26 @@ import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RenderGuiEvent
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
-import noderspace.client.runtime.ClientRuntime
-import noderspace.client.runtime.windows.CanvasContext
-import noderspace.common.logging.KotlinLogging
-import noderspace.common.network.Client
-import noderspace.common.network.Endpoint
-import noderspace.common.network.Network
-import noderspace.common.network.Server
-import noderspace.common.packets.Packet
-import noderspace.common.schemas.Schemas
-import noderspace.common.serial.Serial
-import noderspace.common.serial.Serialize
-import noderspace.common.utils.*
-import noderspace.server.environment.ServerRuntime
-import bpm.lua.LuaBuiltin
+import bpm.client.runtime.ClientRuntime
+import bpm.client.runtime.windows.CanvasContext
+import bpm.common.logging.KotlinLogging
+import bpm.common.network.Client
+import bpm.common.network.Endpoint
+import bpm.common.network.Network
+import bpm.common.network.Server
+import bpm.common.packets.Packet
+import bpm.common.schemas.Schemas
+import bpm.common.serial.Serial
+import bpm.common.serial.Serialize
+import bpm.common.utils.*
+import bpm.server.lua.LuaBuiltin
 import bpm.pipe.PipeNetworkManager
+import bpm.server.ServerRuntime
+import bpm.server.lua.LuaEventExecutor
 import org.apache.logging.log4j.Level
 import thedarkcolour.kotlinforforge.neoforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -65,6 +67,10 @@ class Bootstrap(
     override fun register(bus: IEventBus): IBoostrap {
         registerRegistries(bus)
         registerModSpecificEvents(bus)
+        logger.info("Registering serializers")
+        registerSerializers()
+        logger.info("Registered packets")
+        registerPackets()
         return this
     }
 
@@ -86,11 +92,6 @@ class Bootstrap(
     }
 
     private fun onRegisterPayloads(event: RegisterPayloadHandlersEvent) {
-
-        logger.info("Registering serializers")
-        registerSerializers()
-        logger.info("Registered packets")
-        registerPackets()
         MinecraftNetworkAdapter.registerPayloads(event)
     }
 
@@ -99,10 +100,12 @@ class Bootstrap(
     }
 
     private fun registerSerializers() {
+//        Serial.registerSerializers()
+//        return
         val serializers = serializableList.associateWith { it.objectInstance ?: it.createInstance() }
 
         serializers.forEach { (kClass, instance) ->
-            Serial.register(kClass.java, instance)
+            instance.register()
             logger.info("Registered serializer for ${kClass.simpleName}")
         }
     }
@@ -157,6 +160,8 @@ class Bootstrap(
     private fun onClientSetup(event: FMLClientSetupEvent) {
         LOGGER.log(Level.INFO, "Server client...")
         val gameDir = FMLPaths.GAMEDIR.get()
+
+        //TODO: remove this, only for testing
         val schemaPath = gameDir.resolve("schemas")
         if (!schemaPath.toFile().exists()) {
             schemaPath.toFile().mkdir()
@@ -202,10 +207,13 @@ class Bootstrap(
         if (!schemaPath.toFile().exists()) {
             schemaPath.toFile().mkdir()
         }
+
         //We initialize this here because it's available on the client too for single player
-        Server.install<ServerRuntime>().install<Schemas>(
-            schemaPath, Endpoint.Side.SERVER
-        ).install<PipeNetworkManager>()
+        Server
+            .install<ServerRuntime>()
+            .install<Schemas>(schemaPath, Endpoint.Side.SERVER)
+            .install<PipeNetworkManager>()
+            .install<LuaEventExecutor>()
             .start()
     }
 

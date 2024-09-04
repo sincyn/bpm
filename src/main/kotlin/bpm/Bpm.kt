@@ -2,7 +2,7 @@ package bpm
 
 import bpm.booostrap.Bootstrap
 import net.neoforged.fml.common.Mod
-import noderspace.common.utils.ClassResourceScanner
+import bpm.common.utils.ClassResourceScanner
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

@@ -6,8 +6,7 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.*
-import noderspace.client.runtime.ClientRuntime
-import java.util.UUID
+import bpm.client.runtime.ClientRuntime
 
 class EnderControllerItem : BlockItem(ModBlocks.ENDER_CONTROLLER, Item.Properties().rarity(Rarity.EPIC)) {
 

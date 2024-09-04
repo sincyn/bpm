@@ -1,6 +1,7 @@
 package bpm.mc.block
 
 import bpm.pipe.PipeNetworkManager
+import bpm.server.ServerRuntime
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.entity.LivingEntity
@@ -14,7 +15,6 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.BooleanProperty
 import net.neoforged.neoforge.common.extensions.IBlockExtension
-import noderspace.server.environment.ServerRuntime
 
 open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExtension {
     companion object {
@@ -64,13 +64,7 @@ open class BasePipeBlock(properties: Properties) : Block(properties), IBlockExte
     ) {
         super.setPlacedBy(p_49847_, p_49848_, p_49849_, p_49850_, p_49851_)
         onPipeAdded(p_49847_, p_49848_)
-        if(this is EnderControllerBlock) {
-            val tile = p_49847_.getBlockEntity(p_49848_)
-            if(tile is EnderControllerTileEntity) {
-                //TODO: this should be calling some on added event instead
-                ServerRuntime.recompileWorkspace(tile.getUUID())
-            }
-        }
+
     }
 
     override fun playerDestroy(

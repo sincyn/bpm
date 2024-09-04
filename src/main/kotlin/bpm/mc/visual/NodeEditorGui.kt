@@ -5,11 +5,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import noderspace.client.runtime.ClientRuntime
-import noderspace.common.network.Client
-import noderspace.common.workspace.packets.NodeLibraryRequest
-import noderspace.common.workspace.packets.WorkspaceCompileRequest
-import noderspace.common.workspace.packets.WorkspaceSelected
+import bpm.client.runtime.ClientRuntime
+import bpm.common.network.Client
+import bpm.common.workspace.packets.*
 import java.util.*
 
 class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal("Node Editor")) {
@@ -21,10 +19,10 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
         openTime = System.currentTimeMillis()
         Client {
             it.send(NodeLibraryRequest())
-            it.send(WorkspaceSelected(workspaceUuid))
+//            it.send(WorkspaceSelected(workspaceUuid))
         }
+
         Overlay2D.skipped = true
-        ClientRuntime.openCanvas()
     }
 
     override fun render(pGuiGraphics: GuiGraphics, pMouseX: Int, pMouseY: Int, pPartialTick: Float) {
@@ -40,9 +38,14 @@ class NodeEditorGui(private val workspaceUuid: UUID) : Screen(Component.literal(
     override fun onClose() {
         super.onClose()
         //Fix for nodes not being removed when closing the gui
-        ClientRuntime.closeCanvas()
         Overlay2D.skipped = false
-        Client { it.send(WorkspaceCompileRequest(workspaceUuid)) }
+        Client {
+            it.send(WorkspaceCompileRequest(workspaceUuid))
+            val settings = ClientRuntime.workspace?.settings
+                ?: error("Workspace settings not found. This should not happen")
+            it.send(WorkspaceSettingsStore(workspaceUuid, settings))
+        }
+        ClientRuntime.closeCanvas()
     }
 
     override fun isPauseScreen(): Boolean = false

@@ -2,10 +2,10 @@ package bpm.mc.visual
 
 import imgui.ImGui
 import imgui.flag.ImGuiWindowFlags
-import noderspace.client.runtime.windows.NotificationManager
-import noderspace.common.network.Listener
-import noderspace.common.packets.Packet
-import noderspace.common.workspace.packets.NotifyMessage
+import bpm.client.runtime.windows.NotificationManager
+import bpm.common.network.Listener
+import bpm.common.packets.Packet
+import bpm.common.workspace.packets.NotifyMessage
 import java.util.*
 
 object Overlay2D : Listener {

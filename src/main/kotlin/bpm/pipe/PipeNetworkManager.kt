@@ -11,14 +11,12 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
-import noderspace.common.logging.KotlinLogging
-import noderspace.common.network.Listener
-import noderspace.server.environment.ServerRuntime
+import bpm.common.logging.KotlinLogging
+import bpm.common.network.Listener
+import bpm.server.ServerRuntime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 object PipeNetworkManager : Listener {
 
@@ -33,6 +31,14 @@ object PipeNetworkManager : Listener {
     fun onPipeAdded(pipe: BasePipeBlock, level: Level, pos: BlockPos) {
         addToTypeCache(pipe, pos)
         queueNetworkUpdate(level, pos)
+        if(pipe is EnderControllerBlock) {
+            val controllerTileEntity = level.getBlockEntity(pos) as? EnderControllerTileEntity
+            if (controllerTileEntity != null) {
+                onControllerPlaced(controllerTileEntity)
+            } else {
+                logger.warn { "Couldn't add controller at $pos, no tile entity found" }
+            }
+        }
         logger.info { "Adding pipe at $pos of type ${pipe::class.simpleName}" }
     }
 

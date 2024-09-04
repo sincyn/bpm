@@ -3,7 +3,6 @@ package bpm.mc.block
 import bpm.mc.registries.ModAttachments.UUID_ATTACHMENT
 import bpm.mc.registries.ModTiles
 import net.minecraft.core.BlockPos
-import net.minecraft.core.Holder
 import net.minecraft.core.HolderLookup
 import net.minecraft.core.HolderOwner
 import net.minecraft.nbt.CompoundTag
@@ -11,14 +10,14 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.neoforged.neoforge.attachment.AttachmentHolder
-import net.neoforged.neoforge.attachment.AttachmentType
 import net.neoforged.neoforge.attachment.IAttachmentHolder
 import net.neoforged.neoforge.attachment.IAttachmentSerializer
-import noderspace.client.runtime.ClientRuntime
-import noderspace.common.workspace.Workspace
-import noderspace.server.environment.ServerRuntime
+import bpm.client.runtime.ClientRuntime
+import bpm.common.workspace.Workspace
+import bpm.mc.registries.ModBlocks
+import bpm.pipe.PipeNetworkManager
+import bpm.server.ServerRuntime
 import java.util.*
-import java.util.function.Supplier
 
 class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
     BlockEntity(ModTiles.ENDER_CONTROLLER_TILE_ENTITY, pos, state), IAttachmentHolder,
@@ -26,11 +25,16 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
     val attachmentHolder = AttachmentHolder.AsField(this)
 
+    override fun onLoad() {
+        super.onLoad()
+        PipeNetworkManager.onPipeAdded(ModBlocks.ENDER_CONTROLLER, level!!, worldPosition)
+    }
 
     override fun saveAdditional(tag: CompoundTag, provider: HolderLookup.Provider) {
         super.saveAdditional(tag, provider)
         // Save the UUID directly to the main tag
         // Save other attachments
+        tag.putUUID("_Uid", getUUID())
         attachmentHolder.serializeAttachments(provider)?.let {
             tag.put(AttachmentHolder.ATTACHMENTS_NBT_KEY, it)
         }
@@ -39,7 +43,10 @@ class EnderControllerTileEntity(pos: BlockPos, state: BlockState) :
 
     override fun loadAdditional(tag: CompoundTag, provider: HolderLookup.Provider) {
         super.loadAdditional(tag, provider)
-
+        // Load the UUID directly from the main tag
+        if (tag.contains("_Uid")) {
+            setUUID(tag.getUUID("_Uid"))
+        }
         if (tag.contains(AttachmentHolder.ATTACHMENTS_NBT_KEY)) {
             attachmentHolder.deserializeInternal(provider, tag.getCompound(AttachmentHolder.ATTACHMENTS_NBT_KEY))
         }
