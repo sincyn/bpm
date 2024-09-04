@@ -431,13 +431,6 @@ object ServerRuntime : Listener {
             }, sendTo)
         }
 
-        server.sendToAll(new<NotifyMessage> {
-            icon = 0x0022
-            message = "TESTING"
-            color = "#4287f5"
-            lifetime = 2.5f
-            type = NotifyMessage.NotificationType.INFO
-        })
     }
 
     private fun notifyUsersOfWorkspace(sendTo: UUID) {
