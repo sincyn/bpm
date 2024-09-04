@@ -100,8 +100,7 @@ class Bootstrap(
     }
 
     private fun registerSerializers() {
-//        Serial.registerSerializers()
-//        return
+
         val serializers = serializableList.associateWith { it.objectInstance ?: it.createInstance() }
 
         serializers.forEach { (kClass, instance) ->
@@ -203,11 +202,11 @@ class Bootstrap(
         copySchemas()
         LOGGER.log(Level.INFO, "Scanning for classes...")
         val gameDir = FMLPaths.GAMEDIR.get()
-        //val schemaPath = gameDir.resolve("schemas")
-        val schemasPath = Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas")
-//        if (!schemaPath.toFile().exists()) {
-//            schemaPath.toFile().mkdir()
-//        }
+        val schemasPath = gameDir.resolve("schemas")
+//        val schemasPath = Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas")
+        if (!schemasPath.toFile().exists()) {
+            schemasPath.toFile().mkdir()
+        }
 
         //We initialize this here because it's available on the client too for single player
         Server
