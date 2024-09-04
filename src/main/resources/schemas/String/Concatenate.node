@@ -30,6 +30,4 @@ edges:
     type: string
 
 source: |
-  local function ${NODE.name}_${NODE.uid}(string_a, string_b)
-    return string_a .. string_b
-  end
+  return string_a .. string_b

@@ -5,6 +5,7 @@ import bpm.common.network.Server
 import bpm.common.workspace.packets.NotifyMessage
 
 object Notify : LuaBuiltin {
+
     @JvmStatic
     fun info(msg: String) {
         Server.sendToAll(new<NotifyMessage> {

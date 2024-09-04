@@ -13,8 +13,8 @@ edges:
     description: 'The location to check for redstone power.'
     direction: input
     type: vec3i
-  exec_out:
-    description: 'The output execution flow'
+  on:
+    description: 'Called once when the location has redstone power.'
     direction: output
     type: exec
 source: |
@@ -22,5 +22,7 @@ source: |
   local loc = locationLambda()
   local power = World:signalAt(loc.x, loc.y, loc.z)
   if power > 0 then
-      ${EXEC.exec_out}
+      ${EXEC.on}
+  else 
+      ${EXEC.off}
   end

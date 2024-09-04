@@ -203,15 +203,16 @@ class Bootstrap(
         copySchemas()
         LOGGER.log(Level.INFO, "Scanning for classes...")
         val gameDir = FMLPaths.GAMEDIR.get()
-        val schemaPath = gameDir.resolve("schemas")
-        if (!schemaPath.toFile().exists()) {
-            schemaPath.toFile().mkdir()
-        }
+        //val schemaPath = gameDir.resolve("schemas")
+        val schemasPath = Path.of("C:\\Users\\jraynor\\IdeaProjects\\bpm-dev\\src\\main\\resources\\schemas")
+//        if (!schemaPath.toFile().exists()) {
+//            schemaPath.toFile().mkdir()
+//        }
 
         //We initialize this here because it's available on the client too for single player
         Server
             .install<ServerRuntime>()
-            .install<Schemas>(schemaPath, Endpoint.Side.SERVER)
+            .install<Schemas>(schemasPath, Endpoint.Side.SERVER)
             .install<PipeNetworkManager>()
             .install<LuaEventExecutor>()
             .start()
