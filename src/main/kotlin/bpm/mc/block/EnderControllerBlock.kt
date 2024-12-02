@@ -6,6 +6,7 @@ import bpm.pipe.PipeNetworkManager
 import bpm.server.ServerRuntime
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
 import net.minecraft.core.component.DataComponents.CUSTOM_NAME
 import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionHand
@@ -17,6 +18,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.LevelAccessor
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.EntityBlock
 import net.minecraft.world.level.block.entity.BlockEntity
@@ -31,8 +33,8 @@ import java.util.*
 
 class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), EntityBlock {
 
+    private val shape = Shapes.box(3/16.0, 3/16.0, 3/16.0, 13/16.0, 13/16.0, 13/16.0)
     private val logger = KotlinLogging.logger { }
-    private val shape = makeShape()
 
     override fun useItemOn(
         p_316304_: ItemStack,
@@ -110,6 +112,14 @@ class EnderControllerBlock(properties: Properties) : BasePipeBlock(properties), 
         return super.getStateForPlacement(context)
     }
 
+    override fun getUpdatedState(level: Level, pos: BlockPos, currentState: BlockState): BlockState {
+        var state = super.getUpdatedState(level, pos, currentState)
+        // Temp fix to get rid of the ugly part at the top of the controller when there is no connection.
+        if (state.hasProperty(UP) && !canConnectTo(level, pos, Direction.UP)) {
+            state = state.setValue(UP, false)
+        }
+        return state
+    }
 
     override fun neighborChanged(
         state: BlockState, level: Level, pos: BlockPos, block: Block, fromPos: BlockPos, isMoving: Boolean
